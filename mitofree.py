@@ -20,14 +20,13 @@ import argparse
 parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
-parser.add_argument("seed", type=str, metavar="SEED", help="Path to seed sequence")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
 args = parser.parse_args()
 
 import wget
 import os
 import re
-
+from Bio import Entrez
 
 def main_function(sra_list):
     with open(sra_list) as sra_list:
@@ -36,14 +35,18 @@ def main_function(sra_list):
         for line in sra_list:    
             accession = line.split("\t")[0].strip()
             species = line.split("\t")[1].strip()
+            seed = line.split("\t")[2].strip()
             new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
             name_of_sra_file = "%s.%s.sra" % (species,accession)
             name_of_fastq_file = "%s.%s.fastq" % (species,accession)
             name_of_config_file = "%s.%s.config" % (species,accession)
+            name_of_seed_file = "%s.seed.fa" % (seed)
             if create_folders(new_working_dir):
                 if download_sra_files(accession, name_of_sra_file, new_working_dir):
-                    generate_fastq(name_of_sra_file)
-                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file)
+                    max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
+                    generate_fastq(name_of_sra_file, max_read_length)
+                    download_seed(name_of_seed_file, seed)
+                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
         return("All done!")
 
 
@@ -79,15 +82,24 @@ def download_sra_files(accession, name_of_sra_file, new_working_dir):
             print("\n")
             return True
         except:
-            #os.system("rm -r %s" % (new_working_dir)) ##Are there any errors that should be caugth here?   
+            os.system("rm -r %s" % (new_working_dir)) ##There is no need for the folder if no dataset has been downloaded 
             print("The %s dataset could not be downloaded. Is the run number correct?\n" % (accession))
             return False
 
 
-def generate_fastq(name_of_sra_file):
+def download_seed(name_of_seed_file, seed):
+    try:
+        with open(name_of_seed_file, "w+") as fasta:
+            handle = Entrez.efetch(db='nucleotide', id=seed, rettype='fasta', retmode='text')
+            fasta.write(handle.read())
+        print("Seed file %s downloaded succesfully" % (name_of_seed_file))
+    except:
+        print("Seed file %s could not be downloaded" % (name_of_seed_file))
+
+def generate_fastq(name_of_sra_file, max_read_length):
     print("Converting %s to fastq..." % (name_of_sra_file))
     try:
-        os.system("fastq-dump --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
+        os.system("fastq-dump -M %d --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (max_read_length-1,name_of_sra_file))
         print("Dataset has been converted to fastq succesfully!\n")
     #fastq_name = re.sub("sra$", "fastq", sra_file)
     #with open(fastq_name, "a") as fastq:
@@ -98,13 +110,23 @@ def generate_fastq(name_of_sra_file):
     #identify max read length and use it as parameter for fastq-dump
 
 
-def highest_read_length(fastq_file): #For the -X flag of the fastq-dump
-    return int(150)
-    pass
+def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag of the fastq-dump
+    '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
+    This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
+    os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
+    with open(name_of_fastq_file) as fastq:
+        length = 0
+        for line in fastq:
+            if line.startswith("@"):
+                continue
+            if len(line) > length:
+                length = len(line)
+            next(fastq)
+            next(fastq)
+        return length
 
-
-def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file):
-    with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file. A fuction to define the read length needs to be implemented
+def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file,name_of_seed_file,max_read_length):
+    with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file.
         config.write("""Project:
 -----------------------
 Project name          = %s-%s
@@ -137,10 +159,10 @@ Insert size auto      = yes
 Insert Range          = 1.8
 Insert Range strict   = 1.3
 Use Quality Scores    = no
-""" % (species, accession, args.kmer, args.maxmemory, args.seed, highest_read_length(name_of_fastq_file), name_of_fastq_file))
+""" % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, name_of_fastq_file))
     print("Running NOVOPlasty...")
-    try: ##Then, run the program(needs to be in $PATH)
-        os.system("perl NOVOPlasty*.pl -c {0}  >{1}.output 2>{1}.error &".format(name_of_config_file, name_of_config_file[:-7]))
+    try: ##Then, run the program(needs to be in $PATH) - Only 2.7.2 works at the moment
+        os.system("NOVOPlasty2.7.2.pl -c {0}  >{1}.output 2>{1}.error &".format(name_of_config_file, name_of_config_file[:-7]))
         print("NOVOPlasty assembly successfully finished!\n")
     except:
         print("NOVOPlasty assembly error. Please check the '%s.error' file to identify the problem.\n" % (name_of_config_file[:-7]))
