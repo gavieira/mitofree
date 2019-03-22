@@ -44,7 +44,7 @@ Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (i
 
 The 'dataset_list.txt' is a plain text file that contains three tab-separated collumns, each corresponding to a specific information used by mitofree:
 
-1-SRA_RUN_NUMBER  2-SPECIES_NAME  3-SEED_GENBANK_ACCESSION
+1-SRA_RUN_NUMBER        2-SPECIES_NAME          3-SEED_GENBANK_ACCESSION
 
 For instance:
 
