@@ -27,6 +27,9 @@ import wget
 import os
 import re
 from Bio import Entrez
+import functools
+
+print = functools.partial(print, flush=True) #All "print" functions have flush=True as default. This way, its contents are not buffered, being instead flushed to the standard output. With this, stdout and stderr redirection works like a charm...
 
 def main_function(sra_list):
     with open(sra_list) as sra_list:
