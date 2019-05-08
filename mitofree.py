@@ -142,8 +142,6 @@ Save assembled reads  = no
 Seed Input            = %s
 Reference sequence    = 
 Variance detection    = no
-Heteroplasmy          = 
-HP exclude list       =
 Chloroplast sequence  = 
 
 Dataset 1:
@@ -156,6 +154,12 @@ Combined reads        = %s
 Forward reads         = 
 Reverse reads         =
 
+Heteroplasmy:
+-----------------------
+MAF                   =
+HP exclude list       =
+PCR-free              =
+
 Optional:
 -----------------------
 Insert size auto      = yes
@@ -165,7 +169,7 @@ Use Quality Scores    = no
 """ % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, name_of_fastq_file))
     print("Running NOVOPlasty...")
     try: ##Then, run the program(needs to be in $PATH) - Only 2.7.2 works at the moment
-        os.system("NOVOPlasty2.7.2.pl -c {0}  >{1}.output 2>{1}.error &".format(name_of_config_file, name_of_config_file[:-7]))
+        os.system("NOVOPlasty3.0.pl -c {0}  >{1}.output 2>{1}.error &".format(name_of_config_file, name_of_config_file[:-7]))
         print("NOVOPlasty assembly successfully finished!\n")
     except:
         print("NOVOPlasty assembly error. Please check the '%s.error' file to identify the problem.\n" % (name_of_config_file[:-7]))
