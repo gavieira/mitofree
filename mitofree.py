@@ -180,9 +180,9 @@ Use Quality Scores    = no
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
 def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):
-    if os.path.isfile("./"name_of_novop_assembly_circular):
+    if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
         merge_contigs(name_of_novop_assembly_circular)
-    elif os.path.isfile("./"name_of_novop_assembly_merged):
+    elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
         merge_contigs(name_of_novop_assembly_merged)
     else:
         merge_contigs(name_of_novop_assembly_partial)
