@@ -44,6 +44,9 @@ def main_function(sra_list):
             name_of_fastq_file = "%s.%s.fastq" % (species,accession)
             name_of_config_file = "%s.%s.config" % (species,accession)
             name_of_seed_file = "%s.seed.fa" % (seed)
+            name_of_novop_assembly_circular = "Circularized_assembly_1_%s-%s.fasta" % (species, accession) # The "1" should be changed to regexin order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
+            name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (species, accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
+            name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
             if create_folders(new_working_dir):
                 if download_sra_files(accession, name_of_sra_file, new_working_dir):
                     max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
@@ -176,6 +179,26 @@ Use Quality Scores    = no
 #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
+def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):
+    if os.path.isfile("./"name_of_novop_assembly_circular):
+        merge_contigs(name_of_novop_assembly_circular)
+    elif os.path.isfile("./"name_of_novop_assembly_merged):
+        merge_contigs(name_of_novop_assembly_merged)
+    else:
+        merge_contigs(name_of_novop_assembly_partial)
+
+def merge_contigs(name_of_novop_assembly):
+    '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
+    with open(name_of_novop_assembly) as fasta:
+        number_of_contigs = 0
+        for line in fasta:
+            if line.startswith(">"):
+                number_of_contigs += 1
+        if number_of_contigs > 1:
+            print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
+            os.system("cap3 %s >cap.alignment" % (name_of_novop_assembly)) ##In this section, I could add an if statement to check if the 'singlets' file is empty AND the 'contigs' file has a single contig. If it does, I should tell the user about that. Information about other cases could be added too.
+        else:
+            print("This assembly has only %d contig. Nothing to be merged here." % (number_of_contigs))
 
 if args.filename:
     print(main_function(args.filename))
