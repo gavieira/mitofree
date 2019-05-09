@@ -53,6 +53,7 @@ def main_function(sra_list):
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
                     run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
+                    merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
         return("All done!")
 
 
@@ -189,16 +190,20 @@ def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merge
 
 def merge_contigs(name_of_novop_assembly):
     '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
-    with open(name_of_novop_assembly) as fasta:
+    number_of_contigs = count_contigs(name_of_novop_assembly)
+    if count_contigs(name_of_novop_assembly) > 1:
+        print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
+        os.system("cap3 %s >cap.alignment" % (name_of_novop_assembly)) ##In this section, I could add an if statement to check if the 'singlets' file is empty AND the 'contigs' file has a single contig. If it does, I should tell the user about that. Information about other cases could be added too.
+    else:
+        print("This assembly has only %d contig. Nothing to be merged here." % (number_of_contigs))
+
+def count_contigs(fasta):
+    with open(fasta) as fa:
         number_of_contigs = 0
-        for line in fasta:
+        for line in fa:
             if line.startswith(">"):
                 number_of_contigs += 1
-        if number_of_contigs > 1:
-            print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
-            os.system("cap3 %s >cap.alignment" % (name_of_novop_assembly)) ##In this section, I could add an if statement to check if the 'singlets' file is empty AND the 'contigs' file has a single contig. If it does, I should tell the user about that. Information about other cases could be added too.
-        else:
-            print("This assembly has only %d contig. Nothing to be merged here." % (number_of_contigs))
+    return number_of_contigs
 
 if args.filename:
     print(main_function(args.filename))
