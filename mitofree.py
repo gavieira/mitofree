@@ -191,7 +191,7 @@ def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merge
 def merge_contigs(name_of_novop_assembly):
     '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
     number_of_contigs = count_contigs(name_of_novop_assembly)
-    if count_contigs(name_of_novop_assembly) > 1:
+    if number_of_contigs > 1:
         print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
         os.system("cap3 %s >cap.alignment" % (name_of_novop_assembly)) ##In this section, I could add an if statement to check if the 'singlets' file is empty AND the 'contigs' file has a single contig. If it does, I should tell the user about that. Information about other cases could be added too.
     else:
