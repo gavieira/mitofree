@@ -12,7 +12,7 @@ sudo apt install python3-pip
 pip3 install Biopython && pip3 install wget
 ```
 
-You will also need to download and unpack [NOVOPlasty2.7.2](https://github.com/ndierckx/NOVOPlasty) and [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/), as well as install them in your PATH environment variable.
+You will also need to download and unpack [NOVOPlasty2.7.2](https://github.com/ndierckx/NOVOPlasty), [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), as well as install them in your PATH environment variable.
 
 In order to install to the PATH variable, please add the complete path to NOVOPlasty and sratoolkit to your ~/.bashrc file:
 
