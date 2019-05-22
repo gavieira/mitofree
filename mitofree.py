@@ -18,6 +18,7 @@ __contact__ = "gabrieldeusdeth@gmail.com"
 
 import argparse
 parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
+parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
@@ -30,6 +31,8 @@ import re
 import fileinput
 from Bio import SeqIO, Entrez
 import functools
+import shutil
+import gzip
 
 print = functools.partial(print, flush=True) #All "print" functions have flush=True as default. This way, its contents are not buffered, being instead flushed to the standard output. With this, stdout and stderr redirection works like a charm...
 
@@ -38,8 +41,9 @@ def main_function(sra_list):
         base_working_dir = os.getcwd()
         print("Base working directory is '%s'" % (base_working_dir))
         for line in sra_list:    
-            accession = line.split("\t")[0].strip()
-            species = line.split("\t")[1].strip()
+            accession = line.split("\t")[0].strip() #e.g. "Atta_laevigata". Readable, but confusing if more than one sample from the same species are being used
+            species = line.split("\t")[1].strip() #e.g. "SRR389145". Not very readable, but can be useful when using more than one sample per species
+            #species_and_accession = "{}-{}".format(species, accession) #e.g. "Atta_laevigata-SRR38914"; All the advantages of species (readability) and accession (specificity)
             seed = line.split("\t")[2].strip()
             new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
             name_of_sra_file = "%s.%s.sra" % (species,accession)
@@ -55,8 +59,13 @@ def main_function(sra_list):
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
                     run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
-                    merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
-                    changeid_pre_mitobim("largest_contig.fa", "%s-%s" % (species, accession))
+                    merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial) ##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+                    changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
+                    run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+                    get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
+                    mitobim_convert_maf_to_ace(species)
+                    if args.savespace:
+                        remove_assembly_files()
         return("All done!")
 
 
@@ -232,20 +241,69 @@ def get_largest_contig(name_of_novop_assembly): ##Gets the largest contig assemb
     with open("largest_contig.fa", "w") as contig:
         contig.write(full_record)
 
-def changeid_pre_mitobim(largest_contig, new_id): #Change sequence id in order to become compatible with MITObim (Mira does not accept contigs called "contigs"
+def changeid_pre_mitobim(largest_contig, species_and_accession): #Change sequence id in order to become compatible with MITObim (Mira does not accept contigs called "contigs"
     content = ""
     with open(largest_contig, "r") as fasta: #Opens file (read-only), alters its id and saves the whole sequence to a variable
         for line in fasta:
             if line.startswith(">"):
-                line = re.sub("^>.*$", ">%s" % (new_id), line)
+                line = re.sub("^>.*$", ">%s" % (species_and_accession), line)
                 content += line
             else:
                 content += line
     with open(largest_contig, "w") as fasta: #Opens the same file (write mode), overwriting it with the contents of the variable
         fasta.write(content)
 
-def run_mitobim():
-    pass
+def run_mitobim(largest_contig, species, name_of_fastq_file):
+    with open("mitobim.out", "w") as output, open("mitobim.err", "w") as error:
+        print("Running MITObim...")
+        mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean", "--pair"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
+        mitobim.wait()
+
+def mitobim_last_iteration():
+    iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Get a list of all iteration directories generated by MITObim in the current directory
+    max_iteration_number = 0
+    last_iteration = "iteration0" #Always will be the first iteration when running MITObim from this script
+    for i in iterations:
+        current_iteration_number = int(re.match("^iteration(\d+)$", i).group(1)) #Get the number of each iteration. If it is greater than the previous value of max_iteration_number, its value is updated and the iteration folder is saved in the "last_iteration" variable
+        if current_iteration_number > max_iteration_number:
+            max_iteration_number = current_iteration_number
+            last_iteration = i
+    return(last_iteration) ##In the end, returns the last iteration generated by MITObimim
+
+
+def get_mitobim_final_fasta():
+    iteration = mitobim_last_iteration()
+    for i in os.listdir(iteration):
+        if i.endswith("noIUPAC.fasta"):
+            shutil.copy("{}/{}".format(iteration, i), ".")
+
+def gzip_ace(ace):
+    gz = "{}.gz".format(ace)
+    print("Compressing ACE...")
+    with open(ace, "rb") as ace, gzip.open(gz, "wb") as gz:
+        gz.write(ace.read())
+    print("ACE compressed into gzip")
+
+def mitobim_convert_maf_to_ace(species):
+    iteration = mitobim_last_iteration()
+    ref = "mitobim"
+    mitobim_prefix = "{}-{}".format(species, ref)
+    maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(iteration, mitobim_prefix)
+    ace = "{}.{}".format(mitobim_prefix, iteration).upper()
+    print("Converting MAF to ACE...")
+    miraconvert = subprocess.Popen(["miraconvert", "-f", "maf", "-t", "ace", "-r", "C", "-r", "f", maf, ace])
+    miraconvert.wait()
+    print("Conversion to ACE finished!")
+    ace = "{}.ace".format(ace)
+    gzip_ace(ace)
+    os.remove(ace)
+
+def remove_assembly_files(name-of_fastq_file):
+    os.remove(name_of_fastq_file)
+    iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Repetitive code - already appears in "mitobim_last_iteration()" function. Will refactor the code in order to eliminate this (make a new function that returns this list of iteration directories).
+    for i in iterations:
+        shutil.rmtree(i)
+
 
 if args.filename:
     print(main_function(args.filename))
