@@ -59,11 +59,12 @@ def main_function(sra_list):
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
                     run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
-                    merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial) ##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
-                    changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
-                    run_mitobim("largest_contig.fa", species, name_of_fastq_file)
-                    get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
-                    mitobim_convert_maf_to_ace(species)
+                    if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+                        print("NOVOPlasty assembly succesfully finished!")
+                        changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
+                        run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+                        get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
+                        mitobim_convert_maf_to_ace(species)
                     if args.savespace:
                         remove_assembly_files()
         return("All done!")
@@ -185,24 +186,26 @@ Use Quality Scores    = no
 """ % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, name_of_fastq_file))
     print("Running NOVOPlasty...")
     with open("novop.out", "w") as output, open('novop.err', 'w') as error:
-        try: ##Then, run the program(needs to be in $PATH)
-            novop_assembly =  subprocess.Popen(["NOVOPlasty3.0.pl", "-c", name_of_config_file], stdout=output, stderr=error)
-            novop_assembly.wait()
-            print("NOVOPlasty assembly successfully finished!\n")
-        except:
-            print("NOVOPlasty assembly error. Please check the '%s.error' file to identify the problem.\n" % (name_of_config_file[:-7]))
+        novop_assembly =  subprocess.Popen(["NOVOPlasty3.0.pl", "-c", name_of_config_file], stdout=output, stderr=error)
+        novop_assembly.wait()
 #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
-def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):
-    if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
-        merge_contigs(name_of_novop_assembly_circular)
-    elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
-        merge_contigs(name_of_novop_assembly_merged)
-    elif os.path.isfile("./%s" % (name_of_novop_assembly_partial)):
-        merge_contigs(name_of_novop_assembly_partial) 
-    else:
+def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
+    try:
+        if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
+            merge_contigs(name_of_novop_assembly_circular)
+            return True
+        elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
+            merge_contigs(name_of_novop_assembly_merged)
+            return True
+        elif os.path.isfile("./%s" % (name_of_novop_assembly_partial)):
+            merge_contigs(name_of_novop_assembly_partial)
+            return True
+    except: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
         print("The file %s, %s or %s could not be found in the directory (new_working_dir is %s)" % (name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial))
+        print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
+        return False
 
 def merge_contigs(name_of_novop_assembly):
     '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
@@ -298,7 +301,7 @@ def mitobim_convert_maf_to_ace(species):
     gzip_ace(ace)
     os.remove(ace)
 
-def remove_assembly_files(name-of_fastq_file):
+def remove_assembly_files(name_of_fastq_file):
     os.remove(name_of_fastq_file)
     iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Repetitive code - already appears in "mitobim_last_iteration()" function. Will refactor the code in order to eliminate this (make a new function that returns this list of iteration directories).
     for i in iterations:
