@@ -12,12 +12,12 @@ sudo apt install python3-pip
 pip3 install Biopython && pip3 install wget
 ```
 
-You will also need to download and unpack [NOVOPlasty2.7.2](https://github.com/ndierckx/NOVOPlasty), [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), as well as install them in your PATH environment variable.
+You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), [MITObim1.9](https://github.com/chrishah/MITObim) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
 
-In order to install to the PATH variable, please add the complete path to NOVOPlasty and sratoolkit to your ~/.bashrc file:
+In order to install to the PATH variable, please add the complete path to the binaries (sometimes located in a '/bin' directory instead of the root folder for the program) of all these dependencies to your ~/.bashrc file:
 
 ```
-echo 'export PATH="$PATH:/path/to/NOVOPlasty:path/to/sratoolkit/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:/path/to/NOVOPlasty:/path/to/sratoolkit:/path/to/CAP3:/path/to/MITObim:/path/to/MIRA"' >> ~/.bashrc
 ```
 
 Then, source the file (or just restart the terminal)
@@ -37,7 +37,14 @@ chmod +x /path/to/mitofree.py
 And then run it:
 
 ```
-/path/to/mitofree.py dataset_list.txt
+/path/to/mitofree.py [-h] [-S] [-M] [-K] dataset_list.txt
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -S, --savespace    Automatically removes residual assembly files such as
+                     fastq and mitobim iterations
+  -M , --maxmemory   Limit of RAM usage for NOVOPlasty. Default: no limit
+  -K , --kmer        K-mer used in NOVOPlasty assembly. Default: 39
 ```
 
 Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (in GB). If you are running this software from a machine with limited RAM available, you will want to set this option so that it won't use all your memory. For instance, if you have a 8GB computer, you may want to use "-M 7". 
