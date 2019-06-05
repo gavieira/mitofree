@@ -134,6 +134,7 @@ def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag 
     '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
     This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
     os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
+    os.system("fastq-dump -X 10000 --split-files --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
     with open(name_of_fastq_file) as fastq:
         length = 0
         for line in fastq:
