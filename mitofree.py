@@ -193,6 +193,8 @@ Use Quality Scores    = no
         novop_assembly.wait()
 #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
+    os.remove(fastq1)
+    os.remove(fastq2)
 
 def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
     try:
