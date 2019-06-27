@@ -58,7 +58,7 @@ def main_function(sra_list):
                     max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
-                    run_NOVOPlasty(accession, species, name_of_config_file, name_of_seed_file,max_read_length)
+                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
                     if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
                         print("NOVOPlasty assembly succesfully finished!")
                         changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
@@ -134,7 +134,6 @@ def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag 
     '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
     This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
     os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
-    os.system("fastq-dump -X 10000 --split-files --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
     with open(name_of_fastq_file) as fastq:
         length = 0
         for line in fastq:
@@ -146,10 +145,8 @@ def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag 
             next(fastq)
         return length
 
-def run_NOVOPlasty(accession,species,name_of_config_file,name_of_seed_file,max_read_length):
+def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file,name_of_seed_file,max_read_length):
     with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file.
-        fastq1 = "{}.{}_1.fastq".format(accession, species)
-        fastq2 = "{}.{}_2.fastq".format(accession, species)
         config.write("""Project:
 -----------------------
 Project name          = %s-%s
@@ -167,12 +164,12 @@ Chloroplast sequence  =
 Dataset 1:
 -----------------------
 Read Length           = %d
-Insert size           = 
+Insert size           =
 Platform              = illumina
 Single/Paired         = PE
-Combined reads        =
-Forward reads         = %s
-Reverse reads         = %s
+Combined reads        = %s
+Forward reads         = 
+Reverse reads         =
 
 Heteroplasmy:
 -----------------------
@@ -186,15 +183,13 @@ Insert size auto      = yes
 Insert Range          = 1.8
 Insert Range strict   = 1.3
 Use Quality Scores    = no
-""" % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, fastq1, fastq2))
+""" % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, name_of_fastq_file))
     print("Running NOVOPlasty...")
     with open("novop.out", "w") as output, open('novop.err', 'w') as error:
         novop_assembly =  subprocess.Popen(["NOVOPlasty3.0.pl", "-c", name_of_config_file], stdout=output, stderr=error)
         novop_assembly.wait()
 #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
-    os.remove(fastq1)
-    os.remove(fastq2)
 
 def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
     try:
