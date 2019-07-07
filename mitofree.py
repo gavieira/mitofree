@@ -66,7 +66,7 @@ def main_function(sra_list):
                         get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
                         mitobim_convert_maf_to_ace(species)
                     if args.savespace:
-                        remove_assembly_files()
+                        remove_assembly_files(name_of_fastq_file)
         return("All done!")
 
 
