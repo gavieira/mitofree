@@ -16,7 +16,7 @@ __contact__ = "gabrieldeusdeth@gmail.com"
 #ftp://ftp.sra.ebi.ac.uk/vol1/err/ERR969/ERR969522
 #Pattern = ftp://ftp.sra.ebi.ac.uk/vol1/accession[0:3].lower()/accession[0:6]//accession
 
-import argparse
+import argparse ##Put argparse in function and use __name__ == "__main__"
 parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
 parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
@@ -40,7 +40,7 @@ def main_function(sra_list):
     with open(sra_list) as sra_list:
         base_working_dir = os.getcwd()
         print("Base working directory is '%s'" % (base_working_dir))
-        for line in sra_list:    
+        for line in sra_list: #Write a "parse input" function that stores its content in a suitable data strcuture
             accession = line.split("\t")[0].strip() #e.g. "Atta_laevigata". Readable, but confusing if more than one sample from the same species are being used
             species = line.split("\t")[1].strip() #e.g. "SRR389145". Not very readable, but can be useful when using more than one sample per species
             #species_and_accession = "{}-{}".format(species, accession) #e.g. "Atta_laevigata-SRR38914"; All the advantages of species (readability) and accession (specificity)
@@ -68,7 +68,8 @@ def main_function(sra_list):
                     if args.savespace:
                         remove_assembly_files(name_of_fastq_file)
         return("All done!")
-
+##Add the merge contigs and count contigs here (with its ifs, for readability)
+    
 
 def generate_ftp_link(accession):
     url = ""
@@ -145,7 +146,7 @@ def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag 
             next(fastq)
         return length
 
-def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file,name_of_seed_file,max_read_length):
+def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file,name_of_seed_file,max_read_length): ##Put the config as a separate file. Add a function to just read and modify its contents.
     with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file.
         config.write("""Project:
 -----------------------
@@ -192,25 +193,25 @@ Use Quality Scores    = no
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
 def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
-    try:
-        if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
-            merge_contigs(name_of_novop_assembly_circular)
-            return True
-        elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
-            merge_contigs(name_of_novop_assembly_merged)
-            return True
-        elif os.path.isfile("./%s" % (name_of_novop_assembly_partial)):
-            merge_contigs(name_of_novop_assembly_partial)
-            return True
-    except: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
+    file_to_merge = ''
+    ##Try not to call merge_contigs thrice
+    if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
+        file_to_merge = name_of_novop_assembly_circular
+    elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
+        file_to_merge = name_of_novop_assembly_circular
+    elif os.path.isfile("./%s" % (name_of_novop_assembly_partial)):
+        file_to_merge = name_of_novop_assembly_circular
+    else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
         print("The file %s, %s or %s could not be found in the directory (new_working_dir is %s)" % (name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial))
         print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
         return False
+    merge_contigs(file_to_merge)
+    return True
 
 def merge_contigs(name_of_novop_assembly):
     '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
     number_of_contigs = count_contigs(name_of_novop_assembly)
-    if number_of_contigs > 1:
+    if number_of_contigs > 1: ##
         print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
         with open("cap3.out", "w") as output, open("cap3.err", "w") as error:
             cap3_alignment = subprocess.Popen(["cap3", name_of_novop_assembly], stdout=output, stderr=error)
