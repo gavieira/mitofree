@@ -310,3 +310,10 @@ def remove_assembly_files(name_of_fastq_file):
 
 if args.filename:
     print(main_function(args.filename))
+    
+'''# get rid of Biopython warning in CAI -- could it be used to remove the Entrez warning?
+import warnings
+from Bio import BiopythonWarning
+
+warnings.simplefilter("ignore", BiopythonWarning)
+'''
