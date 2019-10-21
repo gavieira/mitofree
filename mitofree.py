@@ -58,10 +58,10 @@ def main_function(sra_list):
                     max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
-                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length)
-                    if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length, name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
+                    if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
                         print("NOVOPlasty assembly succesfully finished!")
-                        changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
+                        #changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
                         run_mitobim("largest_contig.fa", species, name_of_fastq_file)
                         get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
                         mitobim_convert_maf_to_ace(species)
@@ -120,7 +120,7 @@ def download_seed(name_of_seed_file, seed):
 def generate_fastq(name_of_sra_file, max_read_length):
     print("Converting %s to fastq..." % (name_of_sra_file))
     try:
-        os.system("fastq-dump -M %d --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (max_read_length-1,name_of_sra_file))
+        os.system("fastq-dump -M %d -X 500000000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (max_read_length-1,name_of_sra_file)) #Maximum of 1 billion reads
         print("Dataset has been converted to fastq succesfully!\n")
     #fastq_name = re.sub("sra$", "fastq", sra_file)
     #with open(fastq_name, "a") as fastq:
@@ -146,7 +146,17 @@ def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag 
             next(fastq)
         return length
 
-def run_NOVOPlasty(accession,species,name_of_fastq_file,name_of_config_file,name_of_seed_file,max_read_length): ##Put the config as a separate file. Add a function to just read and modify its contents.
+def check_NOVOP_files(name_of_novop_assembly_circular, name_of_novop_assembly_merged,name_of_novop_assembly_partial):
+    for i in [name_of_novop_assembly_circular,name_of_novop_assembly_merged, name_of_novop_assembly_partial]:
+        if os.path.isfile(i) and os.stat(i).st_size != 0:
+            return True
+    else:
+        return False
+    
+def run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file, max_read_length, name_of_novop_assembly_circular,  name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Put the config as a separate file. Add a function to just read and modify its contents.
+    if check_NOVOP_files(name_of_novop_assembly_circular, name_of_novop_assembly_merged,name_of_novop_assembly_partial):
+        print("NOVOPlasty assembly already finished. Going forward...")
+        return
     with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file.
         config.write("""Project:
 -----------------------
@@ -192,20 +202,20 @@ Use Quality Scores    = no
 #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
 #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
-def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
-    file_to_merge = ''
-    ##Try not to call merge_contigs thrice
-    if os.path.isfile("./%s" % (name_of_novop_assembly_circular)):
-        file_to_merge = name_of_novop_assembly_circular
-    elif os.path.isfile("./%s" % (name_of_novop_assembly_merged)):
-        file_to_merge = name_of_novop_assembly_circular
-    elif os.path.isfile("./%s" % (name_of_novop_assembly_partial)):
-        file_to_merge = name_of_novop_assembly_circular
+def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
+    mergefile = str()
+    if os.path.isfile(name_of_novop_assembly_circular) and os.stat(name_of_novop_assembly_circular).st_size != 0:
+        mergefile = name_of_novop_assembly_circular
+    elif os.path.isfile(name_of_novop_assembly_merged) and os.stat(name_of_novop_assembly_merged).st_size != 0:
+        mergefile = name_of_novop_assembly_merged
+    elif os.path.isfile(name_of_novop_assembly_partial) and os.stat(name_of_novop_assembly_partial).st_size != 0:
+        mergefile = name_of_novop_assembly_partial    
     else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
-        print("The file %s, %s or %s could not be found in the directory (new_working_dir is %s)" % (name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial))
+        print("The file %s, %s or %s could not be found in the directory (new_working_dir is %s)" % (name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir))
         print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
         return False
-    merge_contigs(file_to_merge)
+    print(mergefile)
+    merge_contigs(mergefile)
     return True
 
 def merge_contigs(name_of_novop_assembly):
