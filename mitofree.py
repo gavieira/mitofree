@@ -61,7 +61,7 @@ def main_function(sra_list):
                     run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length, name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
                     if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
                         print("NOVOPlasty assembly succesfully finished!")
-                        #changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
+                        changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
                         run_mitobim("largest_contig.fa", species, name_of_fastq_file)
                         get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
                         mitobim_convert_maf_to_ace(species)
@@ -269,7 +269,8 @@ def changeid_pre_mitobim(largest_contig, species_and_accession): #Change sequenc
 
 def run_mitobim(largest_contig, species, name_of_fastq_file):
     with open("mitobim.out", "w") as output, open("mitobim.err", "w") as error:
-        print("Running MITObim...")
+        print("Running MITObim for species {}...".format(species))
+        print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean --pair".format(largest_contig, species, name_of_fastq_file))
         mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean", "--pair"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
         mitobim.wait()
 
