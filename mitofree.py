@@ -270,8 +270,8 @@ def changeid_pre_mitobim(largest_contig, species_and_accession): #Change sequenc
 def run_mitobim(largest_contig, species, name_of_fastq_file):
     with open("mitobim.out", "w") as output, open("mitobim.err", "w") as error:
         print("Running MITObim for species {}...".format(species))
-        print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean --pair".format(largest_contig, species, name_of_fastq_file))
-        mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean", "--pair"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
+        print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean".format(largest_contig, species, name_of_fastq_file))
+        mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
         mitobim.wait()
 
 def mitobim_last_iteration():
