@@ -21,6 +21,8 @@ parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembl
 parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
+parser.add_argument("-s", "--subset", type=int, metavar="", default=1000000000, help="Max number of reads used in the assembly process. Default: 1 billion reads")
+#parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
 args = parser.parse_args()
 
@@ -120,7 +122,7 @@ def download_seed(name_of_seed_file, seed):
 def generate_fastq(name_of_sra_file, max_read_length):
     print("Converting %s to fastq..." % (name_of_sra_file))
     try:
-        os.system("fastq-dump -M %d -X 500000000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (max_read_length-1,name_of_sra_file)) #Maximum of 1 billion reads
+        os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(max_read_length-1,args.subset*2,name_of_sra_file)) #Maximum of 1 billion reads
         print("Dataset has been converted to fastq succesfully!\n")
     #fastq_name = re.sub("sra$", "fastq", sra_file)
     #with open(fastq_name, "a") as fastq:
@@ -267,7 +269,7 @@ def changeid_pre_mitobim(largest_contig, species_and_accession): #Change sequenc
     with open(largest_contig, "w") as fasta: #Opens the same file (write mode), overwriting it with the contents of the variable
         fasta.write(content)
 
-def run_mitobim(largest_contig, species, name_of_fastq_file):
+def run_mitobim(largest_contig, species, name_of_fastq_file): ##NEED TO IMPLEMENT TIMEOUT
     with open("mitobim.out", "w") as output, open("mitobim.err", "w") as error:
         print("Running MITObim for species {}...".format(species))
         print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean".format(largest_contig, species, name_of_fastq_file))
