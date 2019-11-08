@@ -322,6 +322,7 @@ def get_mitobim_final_fasta():
             shutil.copy("{}/{}".format(i, noiupac[0]), ".")
             return i
             break
+    return False
             
 def gzip_ace(ace):
     gz = "{}.gz".format(ace)
@@ -329,8 +330,6 @@ def gzip_ace(ace):
     with open(ace, "rb") as ace, gzip.open(gz, "wb") as gz:
         gz.write(ace.read())
     print("ACE compressed into gzip")
-
-mitobim_convert_maf_to_ace(species, iteration)
     
 def mitobim_convert_maf_to_ace(species, iteration):
     ref = "mitobim"
