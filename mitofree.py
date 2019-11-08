@@ -23,6 +23,7 @@ parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
 parser.add_argument("-s", "--subset", type=int, metavar="", default=1000000000, help="Max number of reads used in the assembly process. Default: 1 billion reads")
 #parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
+parser.add_argument("-T", "--timeout", type=int, metavar="", default=24, help="Custom timeout for MITObim, in hours. Default: 24h")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
 args = parser.parse_args()
 
@@ -288,7 +289,7 @@ def run_mitobim(largest_contig, species, name_of_fastq_file): ##NEED TO IMPLEMEN
         print("Running MITObim for species {}...".format(species))
         print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean".format(largest_contig, species, name_of_fastq_file))
         time_handler = signal.signal(signal.SIGALRM, sigalrm_handler)
-        signal.alarm(86400) # Start timer
+        signal.alarm(args.timeout*3600) # Start timer, converting hours to minutes
         try:
             mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
             mitobim.wait()
