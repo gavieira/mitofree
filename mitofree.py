@@ -8,14 +8,6 @@ __author__ = "Gabriel Alves Vieira"
 __contact__ = "gabrieldeusdeth@gmail.com"
 
 
-#accession = SRR5437752 (length 10)
-#ftp://ftp.sra.ebi.ac.uk/vol1/srr/SRR543/002/SRR5437752
-#Pattern = ftp://ftp.sra.ebi.ac.uk/vol1/accession[0:3].lower()/accession[0:6]/00accession[-1]/accession
-
-#accession = ERR020102 (length 9)
-#ftp://ftp.sra.ebi.ac.uk/vol1/err/ERR969/ERR969522
-#Pattern = ftp://ftp.sra.ebi.ac.uk/vol1/accession[0:3].lower()/accession[0:6]//accession
-
 import argparse ##Put argparse in function and use __name__ == "__main__"
 parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
 parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
@@ -58,7 +50,7 @@ def main_function(sra_list):
             name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (species, accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
             name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
             if create_folders(new_working_dir):
-                if download_sra_files(accession, name_of_sra_file, new_working_dir):
+                if download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
                     max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
@@ -82,14 +74,6 @@ def main_function(sra_list):
         return("All done!")
 ##Add the merge contigs and count contigs here (with its ifs, for readability)
 
-def generate_ftp_link(accession):
-    url = ""
-    if len(accession) == 10:
-        url = "ftp://ftp.sra.ebi.ac.uk/vol1/%s/%s/00%s/%s" % (accession[:3].lower(), accession[:6], accession[-1], accession)
-    if len(accession) == 9:
-        url = "ftp://ftp.sra.ebi.ac.uk/vol1/%s/%s/%s" % (accession[:3].lower(), accession[:6], accession)
-    return url
-
 def create_folders(new_working_dir): ##Creates folder for each dataset and changes the working directory
     print("New working directory is '%s'\n" % (new_working_dir))
     try:
@@ -103,14 +87,15 @@ def create_folders(new_working_dir): ##Creates folder for each dataset and chang
         print("Could not create folder %s" % (new_working_dir.split("/")[-1]))
         return False
 
-def download_sra_files(accession, name_of_sra_file, new_working_dir):
+def download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
     if os.path.isfile(name_of_sra_file): ##Checks if the sra file has already been downloaded.
         print("The file %s has already been downloaded. Assembly will proceed normally.\n" %(name_of_sra_file))
         return True
     else:
         try:
             print("Downloading %s:" % (accession))
-            wget.download(generate_ftp_link(accession), out= name_of_sra_file) ##Downloads sra files
+            prefetch = subprocess.Popen(["prefetch", "--location", ".", "-o", name_of_sra_file, accession], stdout=output, stderr=error) ##Only works with prefetch >= 2.10.0
+            prefetch.wait()
             print("\n")
             return True
         except:
