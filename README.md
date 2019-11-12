@@ -2,17 +2,17 @@
 
 A pipeline for automated mitochondrial genome assembly using public data.
 
-Needs Biopython and wget modules installed for Python3. You can easily install them through pip3.
+Needs Biopython module installed for Python3. You can easily install them through pip3 or [conda](https://docs.conda.io/en/latest/).
 
 ```
 #If you don't have pip3 installed,run this command (ubuntu):
 sudo apt install python3-pip
 
-#Then, you can install both wget and Biopython using:
-pip3 install Biopython && pip3 install wget
+#Then, you can install Biopython using:
+pip3 install Biopython
 ```
 
-You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), [MITObim1.9](https://github.com/chrishah/MITObim) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
+You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit (>=2.10.0)](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), [MITObim1.9](https://github.com/chrishah/MITObim) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
 
 In order to install to the PATH variable, please add the complete path to the binaries (sometimes located in a '/bin' directory instead of the root folder for the program) of all these dependencies to your ~/.bashrc file:
 
@@ -27,6 +27,9 @@ source ~/.bashrc
 ```
 
 If you can use bash autocompletion to call these scripts, you have succesfully added them to the PATH variable.
+
+***A Friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We have plans of making mitofree available trhough biocona in the future, which will make its instalation way simpler.
+
 
 Lastly, you should download MitoFree and give it execute permission:
 
