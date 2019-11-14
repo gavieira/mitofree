@@ -37,6 +37,8 @@ def main_function(sra_list):
         base_working_dir = os.getcwd()
         print("Base working directory is '%s'" % (base_working_dir))
         for line in sra_list: #Write a "parse input" function that stores its content in a suitable data strcuture
+            if line.startswith("#"):
+                continue
             accession = line.split("\t")[0].strip() #e.g. "Atta_laevigata". Readable, but confusing if more than one sample from the same species are being used
             species = line.split("\t")[1].strip() #e.g. "SRR389145". Not very readable, but can be useful when using more than one sample per species
             #species_and_accession = "{}-{}".format(species, accession) #e.g. "Atta_laevigata-SRR38914"; All the advantages of species (readability) and accession (specificity)
@@ -94,7 +96,7 @@ def download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
     else:
         try:
             print("Downloading %s:" % (accession))
-            prefetch = subprocess.Popen(["prefetch", "--location", ".", "-o", name_of_sra_file, accession], stdout=output, stderr=error) ##Only works with prefetch >= 2.10.0
+            prefetch = subprocess.Popen(["prefetch", "--location", ".", "-o", name_of_sra_file, accession]) ##Only works with prefetch >= 2.10.0
             prefetch.wait()
             print("\n")
             return True
