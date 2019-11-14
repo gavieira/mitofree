@@ -96,7 +96,7 @@ def download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
     else:
         try:
             print("Downloading %s:" % (accession))
-            prefetch = subprocess.Popen(["prefetch", "--location", ".", "-o", name_of_sra_file, accession]) ##Only works with prefetch >= 2.10.0
+            prefetch = subprocess.Popen(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", name_of_sra_file, accession]) ##Only works with prefetch >= 2.10.0
             prefetch.wait()
             print("\n")
             return True
