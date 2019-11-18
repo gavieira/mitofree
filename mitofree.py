@@ -8,19 +8,14 @@ __author__ = "Gabriel Alves Vieira"
 __contact__ = "gabrieldeusdeth@gmail.com"
 
 
-#accession = SRR5437752 (length 10)
-#ftp://ftp.sra.ebi.ac.uk/vol1/srr/SRR543/002/SRR5437752
-#Pattern = ftp://ftp.sra.ebi.ac.uk/vol1/accession[0:3].lower()/accession[0:6]/00accession[-1]/accession
-
-#accession = ERR020102 (length 9)
-#ftp://ftp.sra.ebi.ac.uk/vol1/err/ERR969/ERR969522
-#Pattern = ftp://ftp.sra.ebi.ac.uk/vol1/accession[0:3].lower()/accession[0:6]//accession
-
 import argparse ##Put argparse in function and use __name__ == "__main__"
 parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
 parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
+parser.add_argument("-s", "--subset", type=int, metavar="", default=50000000, help="Max number of reads used in the assembly process. Default: 50 million reads")
+#parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
+parser.add_argument("-T", "--timeout", type=int, metavar="", default=24, help="Custom timeout for MITObim, in hours. Default: 24h")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
 args = parser.parse_args()
 
@@ -33,6 +28,7 @@ from Bio import SeqIO, Entrez
 import functools
 import shutil
 import gzip
+import signal
 
 print = functools.partial(print, flush=True) #All "print" functions have flush=True as default. This way, its contents are not buffered, being instead flushed to the standard output. With this, stdout and stderr redirection works like a charm...
 
@@ -41,6 +37,8 @@ def main_function(sra_list):
         base_working_dir = os.getcwd()
         print("Base working directory is '%s'" % (base_working_dir))
         for line in sra_list: #Write a "parse input" function that stores its content in a suitable data strcuture
+            if line.startswith("#"):
+                continue
             accession = line.split("\t")[0].strip() #e.g. "Atta_laevigata". Readable, but confusing if more than one sample from the same species are being used
             species = line.split("\t")[1].strip() #e.g. "SRR389145". Not very readable, but can be useful when using more than one sample per species
             #species_and_accession = "{}-{}".format(species, accession) #e.g. "Atta_laevigata-SRR38914"; All the advantages of species (readability) and accession (specificity)
@@ -54,7 +52,7 @@ def main_function(sra_list):
             name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (species, accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
             name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
             if create_folders(new_working_dir):
-                if download_sra_files(accession, name_of_sra_file, new_working_dir):
+                if download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
                     max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
                     generate_fastq(name_of_sra_file, max_read_length)
                     download_seed(name_of_seed_file, seed)
@@ -62,22 +60,21 @@ def main_function(sra_list):
                     if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
                         print("NOVOPlasty assembly succesfully finished!")
                         changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
-                        run_mitobim("largest_contig.fa", species, name_of_fastq_file)
-                        get_mitobim_final_fasta() #Checkpoint - continue from here if MITObim has successfully finished
-                        mitobim_convert_maf_to_ace(species)
-                    if args.savespace:
-                        remove_assembly_files(name_of_fastq_file)
+                        ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
+                        #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
+                            #args.subset = args.subset/2
+                            #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+                        try:
+                            run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+                            last_it = last_finalized_iteration(species)
+                            ace = mitobim_convert_maf_to_ace(species, last_it)
+                            mitobim_ace_to_fasta(ace)
+                            if args.savespace:
+                                remove_assembly_files(name_of_fastq_file)
+                        except:
+                            continue
         return("All done!")
 ##Add the merge contigs and count contigs here (with its ifs, for readability)
-    
-
-def generate_ftp_link(accession):
-    url = ""
-    if len(accession) == 10:
-        url = "ftp://ftp.sra.ebi.ac.uk/vol1/%s/%s/00%s/%s" % (accession[:3].lower(), accession[:6], accession[-1], accession)
-    if len(accession) == 9:
-        url = "ftp://ftp.sra.ebi.ac.uk/vol1/%s/%s/%s" % (accession[:3].lower(), accession[:6], accession)
-    return url
 
 def create_folders(new_working_dir): ##Creates folder for each dataset and changes the working directory
     print("New working directory is '%s'\n" % (new_working_dir))
@@ -92,14 +89,15 @@ def create_folders(new_working_dir): ##Creates folder for each dataset and chang
         print("Could not create folder %s" % (new_working_dir.split("/")[-1]))
         return False
 
-def download_sra_files(accession, name_of_sra_file, new_working_dir):
+def download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
     if os.path.isfile(name_of_sra_file): ##Checks if the sra file has already been downloaded.
         print("The file %s has already been downloaded. Assembly will proceed normally.\n" %(name_of_sra_file))
         return True
     else:
         try:
             print("Downloading %s:" % (accession))
-            wget.download(generate_ftp_link(accession), out= name_of_sra_file) ##Downloads sra files
+            prefetch = subprocess.Popen(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", name_of_sra_file, accession]) ##Only works with prefetch >= 2.10.0
+            prefetch.wait()
             print("\n")
             return True
         except:
@@ -120,7 +118,7 @@ def download_seed(name_of_seed_file, seed):
 def generate_fastq(name_of_sra_file, max_read_length):
     print("Converting %s to fastq..." % (name_of_sra_file))
     try:
-        os.system("fastq-dump -M %d -X 500000000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (max_read_length-1,name_of_sra_file)) #Maximum of 1 billion reads
+        os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(max_read_length-1,args.subset//2,name_of_sra_file)) #Maximum of 1 billion reads
         print("Dataset has been converted to fastq succesfully!\n")
     #fastq_name = re.sub("sra$", "fastq", sra_file)
     #with open(fastq_name, "a") as fastq:
@@ -266,41 +264,64 @@ def changeid_pre_mitobim(largest_contig, species_and_accession): #Change sequenc
                 content += line
     with open(largest_contig, "w") as fasta: #Opens the same file (write mode), overwriting it with the contents of the variable
         fasta.write(content)
+        
+class TimeoutException(Exception): # Custom exception for the timeout
+    pass
 
-def run_mitobim(largest_contig, species, name_of_fastq_file):
+def sigalrm_handler(signum, frame):# Handler function to be called when SIGALRM is received
+    # If we get signal, a TimeoutException will be raised.
+    raise TimeoutException()
+        
+def run_mitobim(largest_contig, species, name_of_fastq_file): ##NEED TO IMPLEMENT TIMEOUT
     with open("mitobim.out", "w") as output, open("mitobim.err", "w") as error:
         print("Running MITObim for species {}...".format(species))
         print("Command used: MITObim.pl -end 100 -quick {} -sample {} -ref mitobim -readpool {} --clean".format(largest_contig, species, name_of_fastq_file))
-        mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
-        mitobim.wait()
+        time_handler = signal.signal(signal.SIGALRM, sigalrm_handler)
+        signal.alarm(args.timeout*3600) # Start timer, converting hours to minutes
+        try:
+            mitobim = subprocess.Popen(["MITObim.pl", "-end", "100", "-quick", largest_contig, "-sample", species, "-ref", "mitobim", "-readpool", name_of_fastq_file, "--clean"], stdout=output, stderr=error) ##--clean should be an optional parameter in the final version of the script
+            mitobim.wait()
+            print("MITObim assembly succesfully finished!")
+            return True
+        except TimeoutException:
+            print("MITObim assembly taking too long. Will get the last iteration's result and skip to next dataset")
+            return False
+        finally:
+            signal.alarm(0) # Turn off timer
+            signal.signal(signal.SIGALRM, time_handler) # Restore handler to previous value
 
 def mitobim_last_iteration():
     iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Get a list of all iteration directories generated by MITObim in the current directory
     max_iteration_number = 0
-    last_iteration = "iteration0" #Always will be the first iteration when running MITObim from this script
     for i in iterations:
         current_iteration_number = int(re.match("^iteration(\d+)$", i).group(1)) #Get the number of each iteration. If it is greater than the previous value of max_iteration_number, its value is updated and the iteration folder is saved in the "last_iteration" variable
         if current_iteration_number > max_iteration_number:
             max_iteration_number = current_iteration_number
-            last_iteration = i
-    return(last_iteration) ##In the end, returns the last iteration generated by MITObimim
+    return(max_iteration_number) ##In the end, returns the last iteration generated by MITObim
 
-
-def get_mitobim_final_fasta():
-    iteration = mitobim_last_iteration()
-    for i in os.listdir(iteration):
-        if i.endswith("noIUPAC.fasta"):
-            shutil.copy("{}/{}".format(iteration, i), ".")
-
+def last_finalized_iteration(species):
+    '''Checks if the final iteration has been finalized. If the last iteration has not been finalized (timeout), it works on the second last iteration directory'''
+    last_it = mitobim_last_iteration()
+    if last_it == 0:
+        print("Iteration 0 has not been finished. Please look for potential issues on '{}/mitofree.err'. You can also try running this assembly with a subsample of the data")
+        return False
+    iterations = ["iteration{}".format(last_it), "iteration{}".format(last_it-1)] #Since the --clean flag is being used, only the last and second last iterations are available.
+    for i in iterations:
+        if os.path.isfile("{0}/{1}-mitobim_assembly/{1}-mitobim_d_results/{1}-mitobim_out.maf".format(i, species)):
+            return(i)
+    print("No iteration folder has a finalized assembly... Proceeding to the next species...")
+    return False
+            
 def gzip_ace(ace):
     gz = "{}.gz".format(ace)
     print("Compressing ACE...")
-    with open(ace, "rb") as ace, gzip.open(gz, "wb") as gz:
-        gz.write(ace.read())
-    print("ACE compressed into gzip")
-
-def mitobim_convert_maf_to_ace(species):
-    iteration = mitobim_last_iteration()
+    with open(ace, "rb") as consensus, gzip.open(gz, "wb") as gz:
+        gz.write(consensus.read())
+    print("ACE compressed to gzip. Removing original uncompressed file...")
+    os.remove(ace)
+    print("Uncompressed ACE file removed.")
+    
+def mitobim_convert_maf_to_ace(species, iteration):
     ref = "mitobim"
     mitobim_prefix = "{}-{}".format(species, ref)
     maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(iteration, mitobim_prefix)
@@ -310,8 +331,17 @@ def mitobim_convert_maf_to_ace(species):
     miraconvert.wait()
     print("Conversion to ACE finished!")
     ace = "{}.ace".format(ace)
+    return(ace)
+
+def mitobim_ace_to_fasta(ace):
+    consensus = os.path.splitext(ace)[0] + ".fasta"
+    print("Extracting assembly from ACE file...")
+    with open(consensus, "w") as it:
+        for seq in SeqIO.parse(ace, "ace"):
+            it.write(seq.format("fasta").replace("-", "")) #The assembly generally contains gap characters "-" that need to be removed
+    print("Assembly saved to {}".format(consensus))
     gzip_ace(ace)
-    os.remove(ace)
+
 
 def remove_assembly_files(name_of_fastq_file):
     os.remove(name_of_fastq_file)
