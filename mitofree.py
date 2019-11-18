@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembl
 parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
 parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
 parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
-parser.add_argument("-s", "--subset", type=int, metavar="", default=1000000000, help="Max number of reads used in the assembly process. Default: 1 billion reads")
+parser.add_argument("-s", "--subset", type=int, metavar="", default=50000000, help="Max number of reads used in the assembly process. Default: 50 million reads")
 #parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
 parser.add_argument("-T", "--timeout", type=int, metavar="", default=24, help="Custom timeout for MITObim, in hours. Default: 24h")
 parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
@@ -118,7 +118,7 @@ def download_seed(name_of_seed_file, seed):
 def generate_fastq(name_of_sra_file, max_read_length):
     print("Converting %s to fastq..." % (name_of_sra_file))
     try:
-        os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(max_read_length-1,args.subset*2,name_of_sra_file)) #Maximum of 1 billion reads
+        os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(max_read_length-1,args.subset//2,name_of_sra_file)) #Maximum of 1 billion reads
         print("Dataset has been converted to fastq succesfully!\n")
     #fastq_name = re.sub("sra$", "fastq", sra_file)
     #with open(fastq_name, "a") as fastq:
@@ -303,7 +303,7 @@ def last_finalized_iteration(species):
     '''Checks if the final iteration has been finalized. If the last iteration has not been finalized (timeout), it works on the second last iteration directory'''
     last_it = mitobim_last_iteration()
     if last_it == 0:
-        print("Iteration 0 has not been finished within the time limit. Please try running this assembly with a subsample of the data")
+        print("Iteration 0 has not been finished. Please look for potential issues on '{}/mitofree.err'. You can also try running this assembly with a subsample of the data")
         return False
     iterations = ["iteration{}".format(last_it), "iteration{}".format(last_it-1)] #Since the --clean flag is being used, only the last and second last iterations are available.
     for i in iterations:
