@@ -1,5 +1,11 @@
 # MitoFree (in development)
 
+***You can use the Zenodo DOI to cite this code:*** 
+
+[![DOI](https://zenodo.org/badge/171532531.svg)](https://zenodo.org/badge/latestdoi/171532531)
+
+---
+
 A pipeline for automated mitochondrial genome assembly using public data.
 
 Needs Biopython module installed for Python3. You can easily install them through pip3 or [conda](https://docs.conda.io/en/latest/).
