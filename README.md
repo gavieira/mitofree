@@ -34,7 +34,7 @@ source ~/.bashrc
 
 If you can use bash autocompletion to call these scripts, you have succesfully added them to the PATH variable.
 
-***A Friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We have plans of making mitofree available trhough biocona in the future, which will make its instalation way simpler.
+***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler.
 
 
 Lastly, you should download MitoFree and give it execute permission:
