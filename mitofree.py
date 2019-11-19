@@ -20,7 +20,6 @@ parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file
 args = parser.parse_args()
 
 import subprocess
-import wget
 import os
 import re
 import fileinput
