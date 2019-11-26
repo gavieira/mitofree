@@ -50,28 +50,29 @@ def main_function(sra_list):
             name_of_novop_assembly_circular = "Circularized_assembly_1_%s-%s.fasta" % (species, accession) # The "1" should be changed to regexin order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
             name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (species, accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
             name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
-            if create_folders(new_working_dir):
-                if download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
-                    max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
-                    generate_fastq(name_of_sra_file, max_read_length)
-                    download_seed(name_of_seed_file, seed)
-                    run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length, name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
-                    if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
-                        print("NOVOPlasty assembly succesfully finished!")
-                        changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
-                        ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
-                        #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
+            try:
+                if create_folders(new_working_dir):
+                    if download_sra_files_prefetch(accession, name_of_sra_file, new_working_dir):
+                        max_read_length = highest_read_length(name_of_sra_file, name_of_fastq_file)
+                        generate_fastq(name_of_sra_file, max_read_length)
+                        download_seed(name_of_seed_file, seed)
+                        run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file,max_read_length, name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial)
+                        if merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir):##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+                            print("NOVOPlasty assembly succesfully finished!")
+                            changeid_pre_mitobim("largest_contig.fa", "{}-{}".format(species, accession))
+                            ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
+                            #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
                             #args.subset = args.subset/2
                             #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
-                        try:
                             run_mitobim("largest_contig.fa", species, name_of_fastq_file)
                             last_it = last_finalized_iteration(species)
                             ace = mitobim_convert_maf_to_ace(species, last_it)
                             mitobim_ace_to_fasta(ace)
                             if args.savespace:
                                 remove_assembly_files(name_of_fastq_file)
-                        except:
-                            continue
+            except:
+                print("\nAn error has occurred for this assembly. Proceeding to the next one...\n")
+                continue
         return("All done!")
 ##Add the merge contigs and count contigs here (with its ifs, for readability)
 
