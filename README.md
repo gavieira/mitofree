@@ -4,6 +4,8 @@
 
 [![DOI](https://zenodo.org/badge/171532531.svg)](https://zenodo.org/badge/latestdoi/171532531)
 
+***Docker image available [here](https://hub.docker.com/repository/docker/gavieira/mitofree/general)***
+
 ---
 
 A pipeline for automated mitochondrial genome assembly using public data.
