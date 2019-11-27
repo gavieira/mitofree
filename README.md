@@ -10,7 +10,7 @@
 
 A pipeline for automated mitochondrial genome assembly using public data.
 
-Needs Biopython module installed for Python3. You can easily install them through pip3 or [conda](https://docs.conda.io/en/latest/).
+Needs Biopython module installed for Python3. You can easily install it through pip3 or [conda](https://docs.conda.io/en/latest/).
 
 ```
 #If you don't have pip3 installed,run this command (ubuntu):
@@ -36,7 +36,7 @@ source ~/.bashrc
 
 If you can use bash autocompletion to call these scripts, you have succesfully added them to the PATH variable.
 
-***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler.
+***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler. For now, it is possible to use the [docker image](https://hub.docker.com/repository/docker/gavieira/mitofree/general) to easily run the application in a container, without the need to install any dependencies.
 
 
 Lastly, you should download MitoFree and give it execute permission:
@@ -50,15 +50,22 @@ And then run it:
 ```
 /path/to/mitofree.py [-h] [-S] [-M] [-K] dataset_list.txt
 
-optional arguments:
+Optional arguments:
   -h, --help         show this help message and exit
   -S, --savespace    Automatically removes residual assembly files such as
                      fastq and mitobim iterations
   -M , --maxmemory   Limit of RAM usage for NOVOPlasty. Default: no limit
   -K , --kmer        K-mer used in NOVOPlasty assembly. Default: 39
+  -s , --subset      Max number of reads used in the assembly process.
+                     Default: 50 million reads
+  -T , --timeout     Custom timeout for MITObim, in hours. Default: 24h
 ```
 
-Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (in GB). If you are running this software from a machine with limited RAM available, you will want to set this option so that it won't use all your memory. For instance, if you have a 8GB computer, you may want to use "-M 7". 
+Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (in GB). If you are running this software from a machine with limited RAM available, you will want to set this option so that it won't use all your memory. For instance, if you have a 8GB computer, you may want to use "-M 7".
+
+The -s "--subset" argument can be used to limit dataset size, which can also reduce RAM requirements. This argument can also be used to increase dataset size, which may be useful if you're having trouble in circularizing a mitogenome and some RAM to spare. 
+
+However,be aware that very large datasets can make NOVOPlasty crash or lock MITObim into a pretty much endless assembly process. Because of this, this program has a timer for MITObim processes that will abort the assembly after 24 hours (this value can be modified using the '-T' or '--timeout' flag).
 
 The 'dataset_list.txt' is a plain text file that contains three tab-separated collumns, each corresponding to a specific information used by mitofree:
 
@@ -70,7 +77,7 @@ For instance:
 ERR1306022	Species1	MK297287
 ERR7295165	Species2	MK297241
 ERR1306034	Species3	MK291745
-SRR4409513	Species4	MK291678
+#SRR4409513	Species4	MK291678 #This assembly will be skipped
 ```
 
-Each line corresponds to a different assembly. This way, you can build a list of as many organisms as you want and assemble their mitogenomes all at once.
+Each line corresponds to a different assembly. This way, you can build a list of as many organisms as you want and assemble their mitogenomes all at once. It is also possible to skip an assembly by adding a hash symbol (#) at the start of its corresponding line.
