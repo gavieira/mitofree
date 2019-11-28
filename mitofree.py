@@ -73,6 +73,8 @@ def main_function(sra_list):
             except Exception as error:
                 print("\nAn error has occurred for this assembly:\n\n{}\n\nProceeding to the next assembly\n".format(error))
                 continue
+            else:
+                pass #PUT ANNOTATION MODULE HERE!!!!!
         return("All done!")
 ##Add the merge contigs and count contigs here (with its ifs, for readability)
 
