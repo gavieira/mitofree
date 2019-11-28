@@ -70,8 +70,8 @@ def main_function(sra_list):
                             mitobim_ace_to_fasta(ace)
                             if args.savespace:
                                 remove_assembly_files(name_of_fastq_file)
-            except:
-                print("\nAn error has occurred for this assembly. Proceeding to the next one...\n")
+            except Exception as error:
+                print("\nAn error has occurred for this assembly:\n\n{}\n\nProceeding to the next assembly\n".format(error))
                 continue
         return("All done!")
 ##Add the merge contigs and count contigs here (with its ifs, for readability)
