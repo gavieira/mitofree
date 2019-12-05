@@ -6,25 +6,31 @@
 import argparse
 
 
-class mitofree_input():
-	'''This class holds and manipulates MitoFree's input data''' 
-	def __init__(self, input_file):
-		for line in sra_list: #Write a "parse input" function that stores its content in a suitable data strcuture
-            		if line.startswith("#"):
-                		continue
-            		self.accession = line.split("\t")[0].strip()
-            		self.species = line.split("\t")[1].strip()
-            		self.sp_acc = "{}-{}".format(self.species, self.accession)
-            		self.seed = line.split("\t")[2].strip()
-            		#self.new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
-            		self.name_of_sra_file = "%s.%s.sra" % (self.species,self.accession)
-            		self.name_of_fastq_file = "%s.%s.fastq" % (self.species,self.accession)
-            		self.name_of_config_file = "%s.%s.config" % (self.species,self.accession)
-            		self.name_of_seed_file = "%s.seed.fa" % (self.seed)
-            		self.name_of_novop_assembly_circular = "Circularized_assembly_1_%s-%s.fasta" % (self.species, self.accession) # The "1" should be changed to regex in order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
-            		self.name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (self.species, self.accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
-            		self.name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
+class mitofree_input_parser():
+    '''This class holds and parses MitoFree's input data''' 
+    def __init__(self, input_file):
+        self.input_file = input_file
+        self.sra_run_number = line.split("\t")[0].strip() #SRA run number for the sequencing dataset
+        self.species = line.split("\t")[1].strip()
+        self.prefix = "{}.{}".format(self.species, self.sra_run_number)
+        self.seed = line.split("\t")[2].strip()
+        #self.new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
+        self.sra_file = "{}.sra".format(self.prefix)
+        self.fastq_file = "{}.fastq".format(self.prefix)
+        self.config_file = "{}.config".format(self.prefix)
+        self.seed_file = "{}.seed.fa".format(self.seed)
+        self.novop_assembly_circular = "Circularized_assembly_1_{}-{}.fasta".format(self.species, self.sra_run_number) # The "1" should be changed to regex in order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
+        self.name_of_novop_assembly_merged = "Option_1_{}-{}.fasta".format(self.species, self.sra_run_number) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
+        self.name_of_novop_assembly_partial = "Contigs_1_{}-{}.fasta".format(self.species, self.sra_run_number) #Partial assemblies, unmerged
 
+def get_lines(self):
+    with open(self.input_file) as input:
+        for line in input: #Write a "parse input" function that stores its content in a suitable data strcuture
+            if line.startswith("#"):
+                continue
+            yield line
+    
+    
 
 def main_function(sra_list):
     with open(sra_list) as sra_list:
