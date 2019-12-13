@@ -1,5 +1,5 @@
 __pycache__
 .ipynb_checkpoints
-*.ipynb
+#*.ipynb
 implementations.txt
 refseq81m.tar.bz2

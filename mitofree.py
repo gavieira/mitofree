@@ -3,55 +3,54 @@
 # mitofree.py
 
 
-import argparse
+import argparse, functools
+import mitoassembly
+
+print = functools.partial(print, flush=True) #All "print" functions have flush=True as default. This way, its contents are not buffered, being instead flushed to the standard output. With this, stdout and stderr redirection works like a charm...
 
 
-class mitofree_input_parser():
-    '''This class holds and parses MitoFree's input data''' 
-    def __init__(self, input_file):
-        self.input_file = input_file
-        self.sra_run_number = line.split("\t")[0].strip() #SRA run number for the sequencing dataset
-        self.species = line.split("\t")[1].strip()
-        self.prefix = "{}.{}".format(self.species, self.sra_run_number)
-        self.seed = line.split("\t")[2].strip()
-        #self.new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
-        self.sra_file = "{}.sra".format(self.prefix)
-        self.fastq_file = "{}.fastq".format(self.prefix)
-        self.config_file = "{}.config".format(self.prefix)
-        self.seed_file = "{}.seed.fa".format(self.seed)
-        self.novop_assembly_circular = "Circularized_assembly_1_{}-{}.fasta".format(self.species, self.sra_run_number) # The "1" should be changed to regex in order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
-        self.name_of_novop_assembly_merged = "Option_1_{}-{}.fasta".format(self.species, self.sra_run_number) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
-        self.name_of_novop_assembly_partial = "Contigs_1_{}-{}.fasta".format(self.species, self.sra_run_number) #Partial assemblies, unmerged
+# def create_folders(new_working_dir): ##Creates folder for each dataset and changes the working directory
+#         print("New working directory is '%s'\n" % (new_working_dir))
+#         try:
+#             output_mkdir = os.system("mkdir -p %s" % (new_working_dir))
+#             os.chdir(new_working_dir)
+#             return True
+#         except re.search(".*Permission denied$", output_mkdir):
+#             print("Could not create folder %s. Permission denied." % (new_working_dir.split("/")[-1]))
+#             return False
+#         except:
+#             print("Could not create folder %s" % (new_working_dir.split("/")[-1]))
+#             return False
 
-def get_lines(self):
-    with open(self.input_file) as input:
-        for line in input: #Write a "parse input" function that stores its content in a suitable data strcuture
-            if line.startswith("#"):
-                continue
-            yield line
-    
-    
+# def main_function(sra_list):
+#     try:
+#         self.create_folders()
+#         if self.download_sra_files_prefetch():
+#             max_read_length = self.highest_read_length()
+#             self.generate_fastq()
+#             self.download_seed()
+#             self.run_NOVOPlasty()
+#             if self.merge_priority():##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+#                 print("NOVOPlasty assembly succesfully finished!")
+#                 self.changeid_pre_mitobim()
+#                 ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
+#                 #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
+#                 #args.subset = args.subset/2
+#                 #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+#                 self.run_mitobim()
+#                 last_it = self.last_finalized_iteration()
+#                 ace = self.mitobim_convert_maf_to_ace(species, last_it)
+#                 assembly = self.mitobim_ace_to_fasta(ace)
+#                 if args.savespace:
+#                     self.remove_assembly_files(name_of_fastq_file)
+#     except Exception as error:
+#         print("\nAn error has occurred for this assembly:\n\n{}\n\nProceeding to the next assembly\n".format(error))
+#         continue
+#     else:
+#         pass #PUT ANNOTATION MODULE HERE!!!!!
 
-def main_function(sra_list):
-    with open(sra_list) as sra_list:
-        base_working_dir = os.getcwd()
-        print("Base working directory is '%s'" % (base_working_dir))
-        for line in sra_list: #Write a "parse input" function that stores its content in a suitable data strcuture
-            if line.startswith("#"):
-                continue
-            accession = line.split("\t")[0].strip() #e.g. "Atta_laevigata". Readable, but confusing if more than one sample from the same species are being used
-            species = line.split("\t")[1].strip() #e.g. "SRR389145". Not very readable, but can be useful when using more than one sample per species
-            #species_and_accession = "{}-{}".format(species, accession) #e.g. "Atta_laevigata-SRR38914"; All the advantages of species (readability) and accession (specificity)
-            seed = line.split("\t")[2].strip()
-            new_working_dir = "%s/%s-%s" % (base_working_dir, species.upper(), accession.upper())
-            name_of_sra_file = "%s.%s.sra" % (species,accession)
-            name_of_fastq_file = "%s.%s.fastq" % (species,accession)
-            name_of_config_file = "%s.%s.config" % (species,accession)
-            name_of_seed_file = "%s.seed.fa" % (seed)
-            name_of_novop_assembly_circular = "Circularized_assembly_1_%s-%s.fasta" % (species, accession) # The "1" should be changed to regexin order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
-            name_of_novop_assembly_merged = "Option_1_%s-%s.fasta" % (species, accession) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
-            name_of_novop_assembly_partial = "Contigs_1_%s-%s.fasta" % (species, accession) #Partial assemblies, unmerged
-
+# return("All done!")
+# ##Add the merge contigs and count contigs here (with its ifs, for readability)        
 
 
 def getArgs():
@@ -66,5 +65,8 @@ def getArgs():
 	return parser.parse_args()
 
 if __name__ == "__main__":
-	args = getArgs()
-
+    args = getArgs()
+    with open(args.filename) as datasets:
+        for line in datasets:
+            assembly = mitoassebly.mitoassembly(line)
+            
