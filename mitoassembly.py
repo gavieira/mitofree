@@ -11,11 +11,14 @@ import subprocess
 import os
 import re
 import fileinput
-from Bio import SeqIO, Entrez
+from Bio import SeqIO, Entrez, BiopythonWarning
 import functools
 import shutil
 import gzip
 import signal
+import traceback
+import warnings
+
 
 
 class mitoassembly():
@@ -24,7 +27,11 @@ class mitoassembly():
 #     Add *args and **kwargs to this class
 #     Put create_folder function on the main script
     
-    def __init__(self, dataset_line): ##IMPLEMENT ARGS AND KWARGGS?
+    def __init__(self, dataset_line, kmer=39, maxmemory=0, subset=50000000): ##IMPLEMENT ARGS AND KWARGGS?
+        self.scriptdir = os.path.dirname(os.path.realpath(__file__))
+        self.kmer = kmer
+        self.maxmemory = maxmemory
+        self.subset = subset
         self.sra_run_number = dataset_line.split("\t")[0].strip() #SRA run number for the sequencing dataset
         self.species = dataset_line.split("\t")[1].strip()
         self.prefix = "{}-{}".format(self.species, self.sra_run_number)
@@ -35,69 +42,69 @@ class mitoassembly():
         self.config_file = "{}.config".format(self.prefix)
         self.seed_file = "{}.seed.fa".format(self.seed)
         self.novop_assembly_circular = "Circularized_assembly_1_{}-{}.fasta".format(self.species, self.sra_run_number) # The "1" should be changed to regex in order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
-        self.name_of_novop_assembly_merged = "Option_1_{}-{}.fasta".format(self.species, self.sra_run_number) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
-        self.name_of_novop_assembly_partial = "Contigs_1_{}-{}.fasta".format(self.species, self.sra_run_number) #Partial assemblies, unmerged
+        self.novop_assembly_merged = "Option_1_{}-{}.fasta".format(self.species, self.sra_run_number) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
+        self.novop_assembly_partial = "Contigs_1_{}-{}.fasta".format(self.species, self.sra_run_number) #Partial assemblies, unmerged
 
 
-    def main_function(sra_list):
+    def main_function(self):
         try:
-            self.create_folders()
+            self.create_directory()
             if self.download_sra_files_prefetch():
-                max_read_length = self.highest_read_length()
+                self.max_read_length = self.max_read_length()
                 self.generate_fastq()
                 self.download_seed()
+                self.create_NOVOPlasty_config()
                 self.run_NOVOPlasty()
-                if self.merge_priority():##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
-                    print("NOVOPlasty assembly succesfully finished!")
-                    self.changeid_pre_mitobim()
-                    ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
-                    #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
-                    #args.subset = args.subset/2
-                    #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
-                    self.run_mitobim()
-                    last_it = self.last_finalized_iteration()
-                    ace = self.mitobim_convert_maf_to_ace(species, last_it)
-                    assembly = self.mitobim_ace_to_fasta(ace)
-                    if args.savespace:
-                        self.remove_assembly_files(name_of_fastq_file)
+#                 if self.merge_priority():##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
+#                     print("NOVOPlasty assembly succesfully finished!")
+#                     self.changeid_pre_mitobim()
+#                     ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
+#                     #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
+#                     #args.subset = args.subset/2
+#                     #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+#                     self.run_mitobim()
+#                     last_it = self.last_finalized_iteration()
+#                     ace = self.mitobim_convert_maf_to_ace(species, last_it)
+#                     assembly = self.mitobim_ace_to_fasta(ace)
+#                     if args.savespace:
+#                         self.remove_assembly_files(name_of_fastq_file)
         except Exception as error:
-            print("\nAn error has occurred for this assembly:\n\n{}\n\nProceeding to the next assembly\n".format(error))
+            os.chdir("..")
+            fullerror = traceback.format_exc()
+            print("An error has occurred for this assembly: {}\n\nFULL ERROR:\n\n{}\n\nProceeding to the next assembly...\n".format(error, fullerror))
             pass
         else:
+            os.chdir("..")
             pass #PUT ANNOTATION MODULE HERE!!!!!
 
 
-    def create_folders(new_working_dir): ##Creates folder for each dataset and changes the working directory
-        print("New working directory is '%s'\n" % (new_working_dir))
-        try:
-            output_mkdir = os.system("mkdir -p %s" % (new_working_dir))
-            os.chdir(new_working_dir)
-            return True
-        except re.search(".*Permission denied$", output_mkdir):
-            print("Could not create folder %s. Permission denied." % (new_working_dir.split("/")[-1]))
-            return False
-        except:
-            print("Could not create folder %s" % (new_working_dir.split("/")[-1]))
-            return False
+    def create_directory(self):
+        if not os.path.isdir(self.prefix):
+            os.mkdir(self.prefix)
+        os.chdir(self.prefix)
+
 
     def download_sra_files_prefetch(self):
+        print("WORKING DIR: {}\n".format(os.getcwd()))
         if os.path.isfile(self.sra_file): ##Checks if the sra file has already been downloaded.
             print("The file %s has already been downloaded. Assembly will proceed normally.\n" %(self.sra_file))
             return True
         else:
-            try:
-                print("Downloading %s:" % (self.sra_run_number))
-                prefetch = subprocess.Popen(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number]) ##Only works with prefetch >= 2.10.0
-                prefetch.wait()
-                print("\n")
+            print("Downloading {}:\n".format(self.sra_run_number))
+            prefetch = subprocess.run(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0
+            with open("prefetch.out", "w") as stdout:
+                stdout.write(prefetch.stdout.decode())
+            if prefetch.returncode == 0:
                 return True
-            except:
-                #os.system("rm -r %s" % (new_working_dir)) ##There is no need for the folder if no dataset has been downloaded 
-                print("The %s dataset could not be downloaded. Is the run number correct?\n" % (self.sra_run_number))
+            else:
+                empty_dir = os.getcwd()
+                shutil.rmtree(empty_dir)
+                print("The {} dataset could not be downloaded. Prefetch stderr:\n{}\n".format(self.sra_run_number, prefetch.stderr.decode()))
                 return False
 
 
     def download_seed(self):
+        warnings.simplefilter('ignore', BiopythonWarning)
         try:
             with open(self.seed_file, "w+") as fasta:
                 handle = Entrez.efetch(db='nucleotide', id=self.seed, rettype='fasta', retmode='text')
@@ -106,10 +113,10 @@ class mitoassembly():
         except:
             print("Seed file %s could not be downloaded" % (self.seed_file))
 
-    def generate_fastq(name_of_sra_file, max_read_length):
-        print("Converting %s to fastq..." % (name_of_sra_file))
+    def generate_fastq(self):
+        print("Converting {} to fastq...".format(self.sra_run_number))
         try:
-            os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(max_read_length-1,args.subset//2,name_of_sra_file)) #Maximum of 1 billion reads
+            os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(self.max_read_length-1,self.subset//2,self.sra_file)) #Maximum of 1 billion reads
             print("Dataset has been converted to fastq succesfully!\n")
         #fastq_name = re.sub("sra$", "fastq", sra_file)
         #with open(fastq_name, "a") as fastq:
@@ -120,11 +127,11 @@ class mitoassembly():
         #identify max read length and use it as parameter for fastq-dump
 
 
-    def highest_read_length(name_of_sra_file, name_of_fastq_file): #For the -M flag of the fastq-dump
+    def max_read_length(self): #For the -M flag of the fastq-dump
         '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
         This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
-        os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (name_of_sra_file))
-        with open(name_of_fastq_file) as fastq:
+        os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (self.sra_file))
+        with open(self.fastq_file) as fastq:
             length = 0
             for line in fastq:
                 if line.startswith("@"):
@@ -135,79 +142,47 @@ class mitoassembly():
                 next(fastq)
             return length
 
-    def check_NOVOP_files(name_of_novop_assembly_circular, name_of_novop_assembly_merged,name_of_novop_assembly_partial):
-        for i in [name_of_novop_assembly_circular,name_of_novop_assembly_merged, name_of_novop_assembly_partial]:
+    def check_NOVOPlasty_files(self):
+        for i in [self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial]:
             if os.path.isfile(i) and os.stat(i).st_size != 0:
                 return True
         else:
             return False
+    
+    def create_NOVOPlasty_config(self):
+        config_path = "{}/novop_config_template.txt".format(self.scriptdir)
+        with open(config_path) as template, open(self.config_file, "w") as config_out:
+            config_out.write(template.read().format(self.prefix, self.kmer, self.maxmemory, self.seed_file, self.max_read_length, self.fastq_file))
+            
 
-    def run_NOVOPlasty(accession, species, name_of_fastq_file, name_of_config_file, name_of_seed_file, max_read_length, name_of_novop_assembly_circular,  name_of_novop_assembly_merged, name_of_novop_assembly_partial): ##Put the config as a separate file. Add a function to just read and modify its contents.
-        if check_NOVOP_files(name_of_novop_assembly_circular, name_of_novop_assembly_merged,name_of_novop_assembly_partial):
+    def run_NOVOPlasty(self):
+        if self.check_NOVOPlasty_files():
             print("NOVOPlasty assembly already finished. Going forward...")
             return
-        with open(name_of_config_file , "a") as config: ##First, we have to prepare the configuration file.
-            config.write("""Project:
------------------------
-Project name          = %s-%s
-Type                  = mito
-Genome Range          = 12000-22000
-K-mer                 = %d
-Max memory            = %d
-Extended log          = 0
-Save assembled reads  = no
-Seed Input            = %s
-Reference sequence    = 
-Variance detection    = no
-Chloroplast sequence  = 
-
-Dataset 1:
------------------------
-Read Length           = %d
-Insert size           =
-Platform              = illumina
-Single/Paired         = PE
-Combined reads        = %s
-Forward reads         = 
-Reverse reads         =
-
-Heteroplasmy:
------------------------
-MAF                   =
-HP exclude list       =
-PCR-free              =
-
-Optional:
------------------------
-Insert size auto      = yes
-Insert Range          = 1.8
-Insert Range strict   = 1.3
-Use Quality Scores    = no
-""" % (species, accession, args.kmer, args.maxmemory, name_of_seed_file, max_read_length, name_of_fastq_file))
         print("Running NOVOPlasty...")
         with open("novop.out", "w") as output, open('novop.err', 'w') as error:
-            novop_assembly =  subprocess.Popen(["NOVOPlasty3.0.pl", "-c", name_of_config_file], stdout=output, stderr=error)
+            novop_assembly =  subprocess.Popen(["NOVOPlasty3.0.pl", "-c", self.config_file], stdout=output, stderr=error)
             novop_assembly.wait()
     #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
     #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
-    def merge_priority(name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
+    def merge_priority(self): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
         mergefile = str()
         if os.path.isfile(name_of_novop_assembly_circular) and os.stat(name_of_novop_assembly_circular).st_size != 0:
-            mergefile = name_of_novop_assembly_circular
+            mergefile = self.novop_assembly_circular
         elif os.path.isfile(name_of_novop_assembly_merged) and os.stat(name_of_novop_assembly_merged).st_size != 0:
-            mergefile = name_of_novop_assembly_merged
+            mergefile = self.novop_assembly_merged
         elif os.path.isfile(name_of_novop_assembly_partial) and os.stat(name_of_novop_assembly_partial).st_size != 0:
-            mergefile = name_of_novop_assembly_partial    
+            mergefile = self.novop_assembly_partial    
         else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
-            print("The file %s, %s or %s could not be found in the directory (new_working_dir is %s)" % (name_of_novop_assembly_circular, name_of_novop_assembly_merged, name_of_novop_assembly_partial, new_working_dir))
+            print("The file {}, {} or {} could not be found in the directory {}" % (self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial, os.getpwd()))
             print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
             return False
         print(mergefile)
         merge_contigs(mergefile)
         return True
 
-    def merge_contigs(name_of_novop_assembly):
+    def merge_contigs(self):
         '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
         number_of_contigs = count_contigs(name_of_novop_assembly)
         if number_of_contigs > 1: ##
