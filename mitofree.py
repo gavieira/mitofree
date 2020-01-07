@@ -68,5 +68,7 @@ if __name__ == "__main__":
     args = getArgs()
     with open(args.filename) as datasets:
         for line in datasets:
-            assembly = mitoassebly.mitoassembly(line)
-            
+            if line.startswith('#'): pass
+            else:
+                assembly = mitoassembly.mitoassembly(line)
+                assembly.main_function()
