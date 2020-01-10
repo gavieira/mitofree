@@ -4,3 +4,4 @@ __pycache__
 implementations.txt
 refseq81m.tar.bz2
 MITObim.pl
+gff2gb.py

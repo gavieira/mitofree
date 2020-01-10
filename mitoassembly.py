@@ -12,14 +12,17 @@ import os
 import re
 import fileinput
 from Bio import SeqIO, Entrez, BiopythonWarning
-import functools
 import shutil
 import gzip
 import signal
 import traceback
 import warnings
 
+import functools
+print = functools.partial(print, flush=True)
 
+class InvalidSeedError(Exception):
+    pass
 
 class mitoassembly():
     '''This class takes the sra_run_number, species name (or unique identifier for the sample) and seed accession and performs the mitogenome assembly''' 
@@ -87,11 +90,10 @@ class mitoassembly():
         if not os.path.isdir(self.prefix):
             os.mkdir(self.prefix)
         os.chdir(self.prefix)
-
-
+        
     def download_sra_files_prefetch(self):
         print("WORKING DIR: {}\n".format(os.getcwd()))
-        if os.path.isfile(self.sra_file): ##Checks if the sra file has already been downloaded.
+        if os.path.isfile(self.sra_file): ##Checks if the sra file has already been downloaded
             print("The file %s has already been downloaded. Assembly will proceed normally.\n" %(self.sra_file))
             return True
         else:
@@ -109,6 +111,9 @@ class mitoassembly():
 
 
     def download_seed(self):
+        if os.path.isfile(self.seed_file): ##Checks if the seed file has already been downloaded. NOT WORKING!
+            print("This seed has already been downloaded.")
+            return
         try:
             with open(self.seed_file, "w+") as fasta:
                 handle = Entrez.efetch(db='nucleotide', id=self.seed, rettype='fasta', retmode='text')
@@ -117,7 +122,14 @@ class mitoassembly():
         except:
             print("Seed file %s could not be downloaded" % (self.seed_file))
 
+    def fastq_exists(self):
+        if os.path.isfile(self.fastq_file): ##Checks if the sra file has already been downloaded.
+            return True
+
     def generate_fastq(self):
+        if self.fastq_exists() and os.stat(self.fastq_file).st_size > 100000000: #FASTQ FILE HAS TO BE LARGER THAN 100 MB. REMOVE THIS LATER. 
+            print("The file %s has already been converted. Assembly will proceed normally.\n" %(self.fastq_file))
+            return
         print("Converting {} to fastq...".format(self.sra_run_number))
         try:
             os.system("fastq-dump -M {} -X {} --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ {}".format(self.max_read_length-1,self.subset//2,self.sra_file)) #Maximum of 1 billion reads
@@ -134,6 +146,13 @@ class mitoassembly():
     def max_read_length(self): #For the -M flag of the fastq-dump
         '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
         This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
+        if self.fastq_exists(): #If the file is already there, it has already been normalized by length.
+            with open(self.fastq_file) as fastq: #Thus, we only need to count the length of the first read (2nd line of file)
+                fastq.readline() #Skips first line (header)
+                seq = fastq.readline() # gets 2nd line (sequence)
+                length = len(seq) 
+                #print(length, seq)
+            return length
         os.system("fastq-dump -X 10000 --split-spot --defline-seq '@$ac-$sn/$ri' --defline-qual '+' -O ./ %s" % (self.sra_file))
         with open(self.fastq_file) as fastq:
             length = 0
@@ -158,19 +177,33 @@ class mitoassembly():
         with open(config_path) as template, open(self.config_file, "w") as config_out:
             config_out.write(template.read().format(self.prefix, self.kmer, self.maxmemory, self.seed_file, self.max_read_length, self.fastq_file))
             
-
     def run_NOVOPlasty(self):
         if self.check_NOVOPlasty_files():
             print("NOVOPlasty assembly already finished. Going forward...")
             return
         print("Running NOVOPlasty...")
-        with open("novop.out", "w") as output, open('novop.err', 'w') as error:
-            novop_assembly =  subprocess.Popen(["NOVOPlasty3.7.2.pl", "-c", self.config_file], stdout=output, stderr=error)
-            novop_assembly.wait()
+        try:
+            with open("novop.out", "w+") as output, open('novop.err', 'w+') as error:
+                novop_process = subprocess.run(["NOVOPlasty3.7.2.pl", "-c", self.config_file], timeout=self.timeout*3600, stdout=output, stderr=error, check=True)
+                output.seek(0)
+                for line in output:
+                    if line.startswith("INVALID SEED"):
+                        raise InvalidSeedError("Try a different seed sequence")
+        except subprocess.TimeoutExpired:
+            print("NOVOPlasty assembly taking too long. Skipping to next dataset if there is any")
+            return False
+        except subprocess.CalledProcessError:
+            print("Something went wrong with the NOVOPlasty assembly. Check 'novop.err' for more info")
+            return False
+        else:
+            print("NOVOPlasty assembly finished!")
+            
+    
     #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
     #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
 
     def merge_priority(self): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
+        #assert self.check_NOVOPlasty_files(), "NOVOPlasty result files could not be found. Please check 'novop.out' and 'novop.err' for assembly errors."
         mergefile = str()
         if os.path.isfile(self.novop_assembly_circular) and os.stat(self.novop_assembly_circular).st_size != 0:
             mergefile = self.novop_assembly_circular
@@ -178,15 +211,14 @@ class mitoassembly():
             mergefile = self.novop_assembly_merged
         elif os.path.isfile(self.novop_assembly_partial) and os.stat(self.novop_assembly_partial).st_size != 0:
             mergefile = self.novop_assembly_partial
-        else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
-            print("The file {}, {} or {} could not be found in the directory {}".format(self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial, os.getcwd()))
-            print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
-            return False
-        print("File {} has been found.".format(mergefile))
+#         else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
+#             print("The file {}, {} or {} could not be found in the directory {}".format(self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial, os.getcwd()))
+#             print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
+#             return False
+#         print("File {} has been found.".format(mergefile))
         return mergefile
         #merge_contigs(mergefile)
         #return True
-
 
     def count_contigs(self):
         with open(self.novop_result) as fa:
@@ -232,14 +264,14 @@ class mitoassembly():
         try:
             with open("mitobim.out", "w") as out, open("mitobim.err", "w") as err:
                 mitobim_path = "{}/MITObim.pl".format(self.scriptdir)
-                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--clean"], timeout=10, stdout=out, stderr=err) ##--clean should be an optional parameter in the final version of the script
+                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--clean"], timeout=self.timeout*3600, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
             print("MITObim assembly succesfully finished!")
             return True
         except subprocess.TimeoutExpired:
-            print("MITObim assembly taking too long. Will get the last iteration's result and skip to next dataset")
+            print("MITObim assembly taking too long. Will get the last iteration's result and skip to next dataset if there is any")
             return False
-        except Excpeption as e:
-            print(e)
+        except subprocess.CalledProcessError:
+            print("Something went wrong with the MITObim assembly. Check 'mitobim.err' for more info")
             return False
             
     def mitobim_last_iteration():

@@ -3,8 +3,10 @@
 # mitofree.py
 
 
-import argparse, functools
+import argparse, functools, sys
 import mitoassembly
+
+assert ('linux' in sys.platform), "This code runs on Linux only."
 
 print = functools.partial(print, flush=True) #All "print" functions have flush=True as default. This way, its contents are not buffered, being instead flushed to the standard output. With this, stdout and stderr redirection works like a charm...
 
