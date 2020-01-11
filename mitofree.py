@@ -4,7 +4,7 @@
 
 
 import argparse, functools, sys
-import mitoassembly
+import mitoassembly, mitoannotate
 
 assert ('linux' in sys.platform), "This code runs on Linux only."
 
@@ -56,15 +56,16 @@ print = functools.partial(print, flush=True) #All "print" functions have flush=T
 
 
 def getArgs():
-	parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
-	parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
-	parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
-	parser.add_argument("-K", "--kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
-	parser.add_argument("-s", "--subset", type=int, metavar="", default=50000000, help="Max number of reads used in the assembly process. Default: 50 million reads")
-	#parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
-	parser.add_argument("-T", "--timeout", type=int, metavar="", default=24, help="Custom timeout for MITObim, in hours. Default: 24h")
-	parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
-	return parser.parse_args()
+    parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
+    parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
+    parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
+    parser.add_argument("--novop_kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
+    parser.add_argument("--mitob_kmer", type=int, metavar="", default=73, help="K-mer used in MITObim assembly. Default: 73")
+    parser.add_argument("-s", "--subset", type=int, metavar="", default=50000000, help="Max number of reads used in the assembly process. Default: 50 million reads")
+    #parser.add_argument("-P", "--parallel", type=int, metavar="", default=1, help="Number of parallel assemblies. Default: 1")
+    parser.add_argument("-T", "--timeout", type=int, metavar="", default=24, help="Custom timeout for MITObim, in hours. Default: 24h")
+    parser.add_argument("filename", type=str, metavar="FILENAME", help="Path to file with multiple accessions (one per line)")
+    return parser.parse_args()
 
 if __name__ == "__main__":
     args = getArgs()
@@ -74,3 +75,5 @@ if __name__ == "__main__":
             else:
                 assembly = mitoassembly.mitoassembly(line)
                 assembly.main_function()
+                annotation = mitoannotation.mitoannotation(assembly.mitobim_result)
+

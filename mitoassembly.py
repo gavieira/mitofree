@@ -30,11 +30,12 @@ class mitoassembly():
 #     Add *args and **kwargs to this class
 #     Put create_folder function on the main script
     
-    def __init__(self, dataset_line, kmer=39, maxmemory=0, subset=50000000, timeout=24, savespace=False): ##IMPLEMENT ARGS AND KWARGGS?
+    def __init__(self, dataset_line, novop_kmer=39, mitob_kmer=73, maxmemory=0, subset=50000000, timeout=24, savespace=False): ##IMPLEMENT ARGS AND KWARGGS?
         
         self.timeout = timeout
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
-        self.kmer = kmer
+        self.novop_kmer = novop_kmer
+        self.mitob_kmer = mitob_kmer
         self.maxmemory = maxmemory
         self.subset = subset
         self.savespace = savespace
@@ -51,7 +52,7 @@ class mitoassembly():
         self.novop_assembly_circular = "Circularized_assembly_1_{}-{}.fasta".format(self.species, self.sra_run_number) # The "1" should be changed to regex in order to accept any digit, but os.path.isfile (used in the "merge contigs" section) does not work with regex 
         self.novop_assembly_merged = "Option_1_{}-{}.fasta".format(self.species, self.sra_run_number) #In this case, NOVOPlasty managed to merge the contigs, and if this file contains only one contig, we are going to use it for the next steps without the use of CAP3.
         self.novop_assembly_partial = "Contigs_1_{}-{}.fasta".format(self.species, self.sra_run_number) #Partial assemblies, unmerged
-
+        self.mitobim_result = "{}_mitobim.fasta".format(self.prefix)
 
     def main_function(self):
         try:
@@ -62,20 +63,17 @@ class mitoassembly():
                 self.download_seed()
                 self.create_NOVOPlasty_config()
                 self.run_NOVOPlasty()
-                self.novop_result = self.merge_priority() ##Could use this to check if NOVOPlasty assembly has successfully finished and skip this step.
-                if self.novop_result:
-                    self.merge_contigs()
-                    print("NOVOPlasty assembly succesfully finished!")
-                    ##Add while loop that runs mitobim and, if timeout, run generate_fastq with half the read number and then runs mitobim again:
-                    #while not run_mitobim("largest_contig.fa", species, name_of_fastq_file):
-                    #args.subset = args.subset/2
-                    #run_mitobim("largest_contig.fa", species, name_of_fastq_file)
+                self.novop_result = self.check_novop_assembly()
+                assert self.novop_result, "NOVOPlasty result files could not be found. Check 'novop.out' and 'novop.err'."
+                self.merge_NOVOPlasty_contigs()
+                if not self.check_mitobim_assembly_finished():
                     self.run_mitobim()
-                    #self.last_it = self.last_finalized_iteration() #!!!!!!!!!!!!!!!!!!!
-                    #ace = self.mitobim_convert_maf_to_ace(last_it)
-                    #assembly = self.mitobim_ace_to_fasta(ace)
-                    if self.savespace:
-                        self.remove_assembly_files()
+                    self.iteration = self.get_complete_iteration()
+                    assert self.iteration, "There must be at least one complete assembly iteration."
+                    self.ace = self.mitobim_convert_maf_to_ace()
+                    self.mitobim_ace_to_fasta()
+                if self.savespace:
+                    self.savespace_func()
         except Exception as error:
             os.chdir("..")
             fullerror = traceback.format_exc()
@@ -122,12 +120,12 @@ class mitoassembly():
         except:
             print("Seed file %s could not be downloaded" % (self.seed_file))
 
-    def fastq_exists(self):
-        if os.path.isfile(self.fastq_file): ##Checks if the sra file has already been downloaded.
+    def check_file_exists(self, filename):
+        if os.path.isfile(filename): ##Checks if file is available
             return True
 
     def generate_fastq(self):
-        if self.fastq_exists() and os.stat(self.fastq_file).st_size > 100000000: #FASTQ FILE HAS TO BE LARGER THAN 100 MB. REMOVE THIS LATER. 
+        if self.check_file_exists(self.fastq_file) and os.stat(self.fastq_file).st_size > 100000000: #FASTQ FILE HAS TO BE LARGER THAN 100 MB. REMOVE THIS LATER.
             print("The file %s has already been converted. Assembly will proceed normally.\n" %(self.fastq_file))
             return
         print("Converting {} to fastq...".format(self.sra_run_number))
@@ -146,7 +144,7 @@ class mitoassembly():
     def max_read_length(self): #For the -M flag of the fastq-dump
         '''Generates a fastq file with 10000 spots and uses this data to identify the largest read length of the dataset.
         This function is necessary to generate a full fastq with no variation in read length, a prerequisite for NOVOPlasty usage'''
-        if self.fastq_exists(): #If the file is already there, it has already been normalized by length.
+        if self.check_file_exists(self.fastq_file): #If the file is already there, it has already been normalized by length.
             with open(self.fastq_file) as fastq: #Thus, we only need to count the length of the first read (2nd line of file)
                 fastq.readline() #Skips first line (header)
                 seq = fastq.readline() # gets 2nd line (sequence)
@@ -165,20 +163,20 @@ class mitoassembly():
                 next(fastq)
             return length
 
-    def check_NOVOPlasty_files(self):
+    def check_novop_assembly(self):
         for i in [self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial]:
-            if os.path.isfile(i) and os.stat(i).st_size != 0:
-                return True
+            if self.check_file_exists(i) and os.stat(i).st_size != 0:
+                return i
         else:
             return False
     
     def create_NOVOPlasty_config(self):
         config_path = "{}/novop_config_template.txt".format(self.scriptdir)
         with open(config_path) as template, open(self.config_file, "w") as config_out:
-            config_out.write(template.read().format(self.prefix, self.kmer, self.maxmemory, self.seed_file, self.max_read_length, self.fastq_file))
+            config_out.write(template.read().format(self.prefix, self.novop_kmer, self.maxmemory, self.seed_file, self.max_read_length, self.fastq_file))
             
     def run_NOVOPlasty(self):
-        if self.check_NOVOPlasty_files():
+        if self.check_novop_assembly():
             print("NOVOPlasty assembly already finished. Going forward...")
             return
         print("Running NOVOPlasty...")
@@ -188,7 +186,7 @@ class mitoassembly():
                 output.seek(0)
                 for line in output:
                     if line.startswith("INVALID SEED"):
-                        raise InvalidSeedError("Try a different seed sequence")
+                        raise InvalidSeedError("INVALID SEED: Please try a different seed sequence")
         except subprocess.TimeoutExpired:
             print("NOVOPlasty assembly taking too long. Skipping to next dataset if there is any")
             return False
@@ -197,40 +195,19 @@ class mitoassembly():
             return False
         else:
             print("NOVOPlasty assembly finished!")
-            
-    
-    #Have to find a way for the command line to work with other NOVOPlasty versions (not only 2.7.2).
-    #Need to improve error catching (try and except). The except could be addressed by checking if anything has been written to the error file. The errors during NOVOPlasty could be caught by using tail "-n1" on the output file or by checking if the fasta sequence files have been generated.
-
-    def merge_priority(self): ##Repetitive returns and statements in "except" block are not being executed. Needs to be debbuged
-        #assert self.check_NOVOPlasty_files(), "NOVOPlasty result files could not be found. Please check 'novop.out' and 'novop.err' for assembly errors."
-        mergefile = str()
-        if os.path.isfile(self.novop_assembly_circular) and os.stat(self.novop_assembly_circular).st_size != 0:
-            mergefile = self.novop_assembly_circular
-        elif os.path.isfile(self.novop_assembly_merged) and os.stat(self.novop_assembly_merged).st_size != 0:
-            mergefile = self.novop_assembly_merged
-        elif os.path.isfile(self.novop_assembly_partial) and os.stat(self.novop_assembly_partial).st_size != 0:
-            mergefile = self.novop_assembly_partial
-#         else: ##THE SCRIPT DOES NOT EXECUTE THESE LINES OF CODE
-#             print("The file {}, {} or {} could not be found in the directory {}".format(self.novop_assembly_circular, self.novop_assembly_merged, self.novop_assembly_partial, os.getcwd()))
-#             print("NOVOPlasty assembly error. Please check the 'novop.out' and 'novop.err' files to identify the problem.\n")
-#             return False
-#         print("File {} has been found.".format(mergefile))
-        return mergefile
-        #merge_contigs(mergefile)
-        #return True
 
     def count_contigs(self):
+        number_of_contigs = 0
+        print(self.novop_result)
         with open(self.novop_result) as fa:
-            number_of_contigs = 0
             for line in fa:
                 if line.startswith(">"):
                     number_of_contigs += 1
         return number_of_contigs
         
-        
-    def merge_contigs(self):
+    def merge_NOVOPlasty_contigs(self):
         '''Uses CAP3 to merge contigs assembled by NOVOPlasty'''
+        assert self.novop_result, "NOVOPlasty result files could not be found. Please check 'novop.out' and 'novop.err' for assembly errors."
         number_of_contigs = self.count_contigs()
         if number_of_contigs > 1:
             print("This assembly has %d contigs. Attempting to merge them with CAP3..." % (number_of_contigs))
@@ -243,6 +220,7 @@ class mitoassembly():
             print("This assembly has only %d contig. Nothing to be merged here." % (number_of_contigs))
             with open(self.novop_result) as fasta, open("largest_contig.fa", "w") as largest:
                 largest.write(fasta.read())
+        return True
 
     def get_largest_contig(self): ##Gets the largest contig assembled by CAP3 and writes it to a file
         merged = "{}.cap.contigs".format(self.novop_result)
@@ -258,7 +236,16 @@ class mitoassembly():
         with open("largest_contig.fa", "w") as contig:
             contig.write(full_record)
 
+    def check_mitobim_assembly_finished(self):
+        if self.check_file_exists(self.mitobim_result) and os.stat(self.mitobim_result).st_size != 0:
+            print("MITObim assembly already finished. Going straight to the annotation process")
+            return True
+        else:
+            return False            
+            
     def run_mitobim(self): ##NEED TO IMPLEMENT TIMEOUT
+        print("Removing any iteration folders for previous MITObim assemblies...")
+        self.remove_mitobim_iterations()
         print("Running MITObim for species {}...".format(self.species))
         print("Command used: MITObim.pl -end 100 -quick largest_contig.fa -sample {} -ref mitobim -readpool {} --clean".format(self.species, self.fastq_file))
         try:
@@ -274,8 +261,15 @@ class mitoassembly():
             print("Something went wrong with the MITObim assembly. Check 'mitobim.err' for more info")
             return False
             
-    def mitobim_last_iteration():
+    def iteration_list(self):
         iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Get a list of all iteration directories generated by MITObim in the current directory
+        return iterations
+
+            
+    def get_mitobim_last_iteration(self):
+        print(os.getcwd())
+        iterations = self.iteration_list()
+        print(iterations)
         max_iteration_number = 0
         for i in iterations:
             current_iteration_number = int(re.match("^iteration(\d+)$", i).group(1)) #Get the number of each iteration. If it is greater than the previous value of max_iteration_number, its value is updated and the iteration folder is saved in the "last_iteration" variable
@@ -283,33 +277,34 @@ class mitoassembly():
                 max_iteration_number = current_iteration_number
         return(max_iteration_number) ##In the end, returns the last iteration generated by MITObim
 
-    def last_finalized_iteration(self):
+    def get_complete_iteration(self):
         '''Checks if the final iteration has been finalized. If the last iteration has not been finalized (timeout), it works on the second last iteration directory'''
-        last_it = mitobim_last_iteration()
-        if last_it == 0:
-            print("Iteration 0 has not been finished. Please look for potential issues on '{}/mitofree.err'. You can also try running this assembly with a subsample of the data")
+        max_iteration = self.get_mitobim_last_iteration()
+        print(max_iteration)
+        if max_iteration == 0:
+            print("Iteration 0 has not been finished. Please look for potential issues on 'mitobim.err'. You can also try running this assembly with a subsample of the data")
             return False
-        iterations = ["iteration{}".format(last_it), "iteration{}".format(last_it-1)] #Since the --clean flag is being used, only the last and second last iterations are available.
+        iterations = ["iteration{}".format(max_iteration), "iteration{}".format(max_iteration-1)] #Since the --clean flag is being used, only the last and second last iterations are available.
         for i in iterations:
             if os.path.isfile("{0}/{1}-mitobim_assembly/{1}-mitobim_d_results/{1}-mitobim_out.maf".format(i, self.species)):
                 return(i)
         print("No iteration folder has a finalized assembly... Proceeding to the next species...")
         return False
 
-    def gzip_ace(ace):
-        gz = "{}.gz".format(ace)
+    def gzip_ace(self):
+        gz = "{}.gz".format(self.ace)
         print("Compressing ACE...")
-        with open(ace, "rb") as consensus, gzip.open(gz, "wb") as gz:
+        with open(self.ace, "rb") as consensus, gzip.open(gz, "wb") as gz:
             gz.write(consensus.read())
         print("ACE compressed to gzip. Removing original uncompressed file...")
-        os.remove(ace)
+        os.remove(self.ace)
         print("Uncompressed ACE file removed.")
 
-    def mitobim_convert_maf_to_ace(species, iteration):
-        ref = "mitobim"
-        mitobim_prefix = "{}-{}".format(species, ref)
-        maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(iteration, mitobim_prefix)
-        ace = "{}.{}".format(mitobim_prefix, iteration).upper()
+    def mitobim_convert_maf_to_ace(self):
+        mitobim_ref_name = "mitobim"
+        mitobim_prefix = "{}-{}".format(self.species, mitobim_ref_name)
+        maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(self.iteration, mitobim_prefix)
+        ace = "{}.{}".format(mitobim_prefix, self.iteration).upper()
         print("Converting MAF to ACE...")
         miraconvert = subprocess.Popen(["miraconvert", "-f", "maf", "-t", "ace", "-r", "C", "-r", "f", maf, ace])
         miraconvert.wait()
@@ -317,27 +312,26 @@ class mitoassembly():
         ace = "{}.ace".format(ace)
         return(ace)
 
-    def mitobim_ace_to_fasta(ace):
-        mitobim_result = os.path.splitext(ace)[0] + ".fasta"
+    def mitobim_ace_to_fasta(self):
         print("Extracting assembly from ACE file...")
-        with open(consensus, "w") as it:
-            for seq in SeqIO.parse(ace, "ace"):
+        with open(self.mitobim_result, "w") as it:
+            for seq in SeqIO.parse(self.ace, "ace"):
                 it.write(seq.format("fasta").replace("-", "")) #The assembly generally contains gap characters "-" that need to be removed
-        print("Assembly saved to {}".format(consensus))
-        gzip_ace(ace)
-        return(mitobim_result)
+        print("Assembly saved to {}".format(self.mitobim_result))
+        self.gzip_ace()
 
-
-    def remove_assembly_files(self):
-        os.remove(self.fastq_file)
-        iterations = [i for i in os.listdir(".") if i.startswith("iteration")] ##Repetitive code - already appears in "mitobim_last_iteration()" function. Will refactor the code in order to eliminate this (make a new function that returns this list of iteration directories).
+    def remove_mitobim_iterations(self):
+        iterations = self.iteration_list()
         for i in iterations:
             shutil.rmtree(i)
 
+    def savespace_func(self):
+        os.remove(self.fastq_file)
+        self.remove_mitobim_iterations()
 
-# if args.filename:
+#if args.filename:
 #     print(main_function(args.filename))
-    
+
 '''# get rid of Biopython warning in CAI -- could it be used to remove the Entrez warning?
 import warnings
 from Bio import BiopythonWarning
