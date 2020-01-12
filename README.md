@@ -12,15 +12,16 @@ A pipeline for automated mitochondrial genome assembly using public data.
 
 Needs Biopython module installed for Python3. You can easily install it through pip3 or [conda](https://docs.conda.io/en/latest/).
 
-```
-#If you don't have pip3 installed,run this command (ubuntu):
-sudo apt install python3-pip
 
-#Then, you can install Biopython using:
-pip3 install Biopython
+```
+#To install through conda:
+conda install mitos=2.0.3 biopython=1.76 mira=4.0.2 sra-tools=2.10.0 cap3 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
+
+#Then, you need to activate mitofree's environment:
+conda activate mitofree
 ```
 
-You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit (>=2.10.0)](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html), [MITObim1.9](https://github.com/chrishah/MITObim) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
+You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit (>=2.10.0)](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
 
 In order to install to the PATH variable, please add the complete path to the binaries (sometimes located in a '/bin' directory instead of the root folder for the program) of all these dependencies to your ~/.bashrc file:
 
@@ -36,7 +37,7 @@ source ~/.bashrc
 
 If you can use bash autocompletion to call these scripts, you have succesfully added them to the PATH variable.
 
-***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler. For now, it is possible to use the [docker image](https://hub.docker.com/repository/docker/gavieira/mitofree/general) to easily run the application in a container, without the need to install any dependencies.
+***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler. For now, it is possible to use the [docker image](https://hub.docker.com/repository/docker/gavieira/mitofree/general) or to create an mitofree environment to easily run the application in a container, without the need to install any dependencies.
 
 
 Lastly, you should download MitoFree and give it execute permission:
@@ -65,10 +66,6 @@ Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (i
 
 The -s "--subset" argument can be used to limit dataset size, which can also reduce RAM requirements. This argument can also be used to increase dataset size, which may be useful if you're having trouble in circularizing a mitogenome and some RAM to spare. 
 
-However,be aware that very large datasets can make NOVOPlasty crash or lock MITObim into a pretty much endless assembly process. Because of this, this program has a timer for MITObim processes that will abort the assembly after 24 hours (this value can be modified using the '-T' or '--timeout' flag).
-
-The 'dataset_list.txt' is a plain text file that contains three tab-separated collumns, each corresponding to a specific information used by mitofree:
-
 1-SRA_RUN_NUMBER        2-SPECIES_NAME          3-SEED_GENBANK_ACCESSION
 
 For instance:
@@ -81,3 +78,7 @@ ERR1306034	Species3	MK291745
 ```
 
 Each line corresponds to a different assembly. This way, you can build a list of as many organisms as you want and assemble their mitogenomes all at once. It is also possible to skip an assembly by adding a hash symbol (#) at the start of its corresponding line.
+# MitoFree (in development)
+
+***You can use the Zenodo DOI to cite this code:*** 
+
