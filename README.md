@@ -15,7 +15,7 @@ Needs Biopython module installed for Python3. You can easily install it through 
 
 ```
 #To install through conda:
-conda install mitos=2.0.3 biopython=1.76 mira=4.0.2 sra-tools=2.10.0 cap3 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
+conda install mitos=2.0.3 biopython mira=4.0.2 sra-tools=2.10.0 cap3 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
 
 #Then, you need to activate mitofree's environment:
 conda activate mitofree
