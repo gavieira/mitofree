@@ -28,34 +28,24 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         super().__init__(dataset_line) #When passing 'line' as argument, access the 'init' method of the base class with said line as argument. This way, all attributes from base class are available to child class and custom attributes can be added to child class too.
         
     def main_function(self):
-        try:
-            self.create_directory()
-            if self.download_sra_files_prefetch():
-                self.max_read_length = self.max_read_length()
-                self.generate_fastq()
-                self.download_seed()
-                self.create_NOVOPlasty_config()
-                self.run_NOVOPlasty()
-                self.novop_result = self.check_novop_assembly()
-                assert self.novop_result, "NOVOPlasty result files could not be found. Check 'novop.out' and 'novop.err'."
-                self.merge_NOVOPlasty_contigs()
-                if not self.check_mitobim_assembly_finished():
-                    self.run_mitobim()
-                    self.iteration = self.get_complete_iteration()
-                    assert self.iteration, "There must be at least one complete assembly iteration."
-                    self.ace = self.mitobim_convert_maf_to_ace()
-                    self.mitobim_ace_to_fasta()
-                if self.savespace:
-                    self.savespace_func()
-        except Exception as error:
-            os.chdir("..")
-            fullerror = traceback.format_exc()
-            print("An error has occurred for this assembly: {}\n\nFULL ERROR:\n\n{}\n\nProceeding to the next assembly...\n".format(error, fullerror))
-            pass
-        else:
-            os.chdir("..")
-            pass #PUT ANNOTATION MODULE HERE!!!!!
-
+        self.create_directory()
+        if self.download_sra_files_prefetch():
+            self.max_read_length = self.max_read_length()
+            self.generate_fastq()
+            self.download_seed()
+            self.create_NOVOPlasty_config()
+            self.run_NOVOPlasty()
+            self.novop_result = self.check_novop_assembly()
+            assert self.novop_result, "NOVOPlasty result files could not be found. Check 'novop.out' and 'novop.err'."
+            self.merge_NOVOPlasty_contigs()
+            if not self.check_mitobim_assembly_finished():
+                self.run_mitobim()
+                self.iteration = self.get_complete_iteration()
+                assert self.iteration, "There must be at least one complete assembly iteration."
+                self.ace = self.mitobim_convert_maf_to_ace()
+                self.mitobim_ace_to_fasta()
+            if self.savespace:
+                self.savespace_func()
 
     def create_directory(self):
         if not os.path.isdir(self.prefix):

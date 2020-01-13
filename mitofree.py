@@ -4,6 +4,7 @@
 
 
 import argparse, functools, sys, os
+import traceback
 from mitoassembly import mitoassembly
 from mitoannotate import mitoannotation
 
@@ -32,8 +33,15 @@ if __name__ == "__main__":
         for line in datasets:
             if line.startswith('#'): pass
             else:
-                assembly = mitoassembly(line)
-                assembly.main_function()
-                annotation = mitoannotation(line, gencode=5)
-                annotation.run_mitos()
+                try:
+                    assembly = mitoassembly(line)
+                    assembly.main_function()
+                    annotation = mitoannotation(line, gencode=5)
+                    annotation.run_mitos()
+                    os.chdir("..")
+                except Exception as error:
+                    os.chdir("..")
+                    fullerror = traceback.format_exc()
+                    print("An error has occurred for this assembly: {}\n\nFULL ERROR:\n\n{}\n\nProceeding to the next assembly...\n".format(error, fullerror))
+                    pass
 
