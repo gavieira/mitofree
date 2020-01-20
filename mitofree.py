@@ -38,6 +38,7 @@ if __name__ == "__main__":
                     assembly.main_function()
                     annotation = mitoannotation(line, gencode=5)
                     annotation.run_mitos()
+                    annotation.generate_gbk()
                     os.chdir("..")
                 except Exception as error:
                     os.chdir("..")

@@ -22,6 +22,9 @@ print = functools.partial(print, flush=True)
 class InvalidSeedError(Exception):
     pass
 
+class CombinedFileError(Exception):
+    pass
+
 class mitoassembly(mitofree_attributes): #INHERITANCE!!!
     '''This class takes the sra_run_number, species name (or unique identifier for the sample) and seed accession and performs the mitogenome assembly'''
     def __init__(self, dataset_line): #Specific assembly attributes from mitofree_attributes have to be transferred here!!!
@@ -86,7 +89,11 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
     def check_file_exists(self, filename):
         if os.path.isfile(filename): ##Checks if file is available
             return True
-
+    
+    def generate_separate_fastq(self): ##IMPLEMENT THIS
+        pass
+    
+    
     def generate_fastq(self):
         if self.check_file_exists(self.fastq_file) and os.stat(self.fastq_file).st_size > 100000000: #FASTQ FILE HAS TO BE LARGER THAN 100 MB. REMOVE THIS LATER.
             print("The file %s has already been converted. Assembly will proceed normally.\n" %(self.fastq_file))
@@ -133,6 +140,9 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         else:
             return False
     
+    def create_NOVOPlasty_config_separate(self): ##IMPLEMENT THIS!!!
+        pass
+    
     def create_NOVOPlasty_config(self):
         config_path = "{}/novop_config_template.txt".format(self.scriptdir)
         with open(config_path) as template, open(self.config_file, "w") as config_out:
@@ -150,6 +160,8 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
                 for line in output:
                     if line.startswith("INVALID SEED"):
                         raise InvalidSeedError("INVALID SEED: Please try a different seed sequence")
+                    if line.startswith("COMBINED FILE NOT SUPPORTED"):
+                        raise CombinedFileError("COMBINED FILE NOT SUPPORTED, PLEASE TRY USING A SUBSET OF THE DATA") #Need to implement the usage of separate fastq-files for NOVOPlasty.
         except subprocess.TimeoutExpired:
             print("NOVOPlasty assembly taking too long. Skipping to next dataset if there is any")
             return False
@@ -214,7 +226,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         try:
             with open("mitobim.out", "w") as out, open("mitobim.err", "w") as err:
                 mitobim_path = "{}/MITObim.pl".format(self.scriptdir)
-                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--clean"], timeout=self.timeout*3600, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
+                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--kmer", self.mitob_kmer, "--clean"], timeout=self.timeout*3600, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
             print("MITObim assembly succesfully finished!")
             return True
         except subprocess.TimeoutExpired:

@@ -2,6 +2,9 @@ __pycache__
 .ipynb_checkpoints
 #*.ipynb
 implementations.txt
+refseq63m.tar.bz2
 refseq81m.tar.bz2
 MITObim.pl
 gff2gb.py
+refseq81m/
+feature_template*
