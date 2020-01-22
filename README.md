@@ -15,10 +15,14 @@ Needs Biopython module installed for Python3. You can easily install it through 
 
 ```
 #To install through conda:
-conda install mitos=2.0.3 biopython mira=4.0.2 sra-tools=2.10.0 cap3 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
+conda install mitos=2.0.3 biopython=1.73 mira=4.0.2 sra-tools=2.10.0 cap3=10.2011 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
 
 #Then, you need to activate mitofree's environment:
 conda activate mitofree
+
+#OBS: You will need python>=3.7 to run this script (because, among other things, of the 'capture_output' option from subprocess.run)
+#If python version is not compatible, you can update it with:
+conda update python
 ```
 
 You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit (>=2.10.0)](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.

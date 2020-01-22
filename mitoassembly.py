@@ -62,7 +62,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
             return True
         else:
             print("Downloading {}:\n".format(self.sra_run_number))
-            prefetch = subprocess.run(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0
+            prefetch = subprocess.run(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0 ##'capture_output' only works with python>=3.7
             with open("prefetch.out", "w") as stdout:
                 stdout.write(prefetch.stdout.decode())
             if prefetch.returncode == 0:
@@ -226,7 +226,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         try:
             with open("mitobim.out", "w") as out, open("mitobim.err", "w") as err:
                 mitobim_path = "{}/MITObim.pl".format(self.scriptdir)
-                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--kmer", self.mitob_kmer, "--clean"], timeout=self.timeout*3600, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
+                mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--kmer", str(self.mitob_kmer), "--clean"], timeout=self.timeout, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
             print("MITObim assembly succesfully finished!")
             return True
         except subprocess.TimeoutExpired:

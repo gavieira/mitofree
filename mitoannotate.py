@@ -13,6 +13,9 @@ from Bio.Seq import Seq
 from Bio.Alphabet import generic_dna
 from mitoattributes import mitofree_attributes
 
+import functools
+print = functools.partial(print, flush=True)
+
 
 class mitoannotation(mitofree_attributes):
     def __init__(self, dataset_line, gencode=2):
@@ -76,14 +79,22 @@ class mitoannotation(mitofree_attributes):
             return False
 
 
-    def run_mitos(self): ##Is MITOS1 better?
+    def run_mitos(self):
         if not self.check_mitos_results():
             print("Running MITOS...")
-            mitos = subprocess.run(["runmitos.py", "-i", self.mitobim_result, "-c", str(self.gencode), "-o", "mitos_results", "-r", self.refdir, "--linear", "--ncbicode", "--noplots", "--best", "--alarab", "--intron", "0", "--oril", "0", "--orih", "0"])
-            print("Finished MITOS with exit status {}".format(str(mitos.returncode)))
-        else: pass
+            with open("mitos.out", "w+") as output, open('mitos.err', 'w+') as error:
+                mitos = subprocess.run(["runmitos.py", "-i", self.mitobim_result, "-c", str(self.gencode), "-o", "mitos_results", "-r", self.refdir, "--linear", "--ncbicode", "--noplots", "--best", "--alarab", "--intron", "0", "--oril", "0", "--orih", "0"], stdout=output, stderr=error)
+                print("Finished MITOS with exit status {}".format(str(mitos.returncode)))
+                output.seek(0)
+                missing_feat = False
+                for line in output:
+                    if line.startswith("missing:"):
+                        missing_feat = True
+                        print('WARNING: {}'.format(line))
+                if not missing_feat:
+                    print("All features were succesfully annotated")
+        else:
             print("Annotation process already finished. Skipping to generation of genbank file...")
-
 
     def generate_gbk(self):
         with open(self.gbk, "w") as gbk:
@@ -123,7 +134,7 @@ class mitoannotation(mitofree_attributes):
         return (feature_name, feature_type, product, anticodon, inipos, endpos, strand)
         
     def parse_feat_name(self, feat_name):
-        anticodon = ''
+        anticodon = final_feat_name = feat_type = product = ''
         if feat_name.strip().startswith("trn"): #'(' index used to separate codon/name - e.g. "trnL1(tag)" (MITOS output in .bed file) to "trnL1" and "tag". The codon is then reverse translated to obtain the anticodon sequence ('cua', in this case).
             separator_index = feat_name.find("(")
             codon = feat_name[separator_index+1:-1]
@@ -165,4 +176,3 @@ if __name__ == "__main__":
                     fullerror = traceback.format_exc()
                     print("An error has occurred for this assembly: {}\n\nFULL ERROR:\n\n{}\n\nProceeding to the next assembly...\n".format(error, fullerror))
                     pass
-    
