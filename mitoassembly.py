@@ -222,7 +222,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         print("Removing any iteration folders for previous MITObim assemblies...")
         self.remove_mitobim_iterations()
         print("Running MITObim for species {}...".format(self.species))
-        print("Command used: MITObim.pl -end 100 -quick largest_contig.fa -sample {} -ref mitobim -readpool {} --clean".format(self.species, self.fastq_file))
+        print("Command used: MITObim.pl -end 100 -quick largest_contig.fa -sample {} -ref mitobim -readpool {} --kmer {} --clean".format(self.species, self.fastq_file, self.mitob_kmer))
         try:
             with open("mitobim.out", "w") as out, open("mitobim.err", "w") as err:
                 mitobim_path = "{}/MITObim.pl".format(self.scriptdir)
