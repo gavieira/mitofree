@@ -4,7 +4,8 @@ MAINTAINER gavieira <gabrieldeusdeth@gmail.com>
 ##Cloning MitoFree repo into root directory and installing biopython
 
 RUN conda install git biopython && \
-    git clone https://github.com/gavieira/mitofree
+    git clone https://github.com/gavieira/mitofree && \
+    conda remove git
 
 ##Adding bioconda to conda software channels
 
