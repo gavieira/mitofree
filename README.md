@@ -50,17 +50,40 @@ Lastly, you should download MitoFree and give it execute permission:
 chmod +x /path/to/mitofree.py
 ```
 
+## Running from docker image (needs docker software installed):
+
+Download the latest image:
+
+```
+docker pull gavieira/mitofree:latest
+```
+
+Then, go to the directory where the MitoFree's input file is and use:
+
+```
+docker run --name mitofree -i -t -v $PWD:/mnt -w /mnt gavieira/mitofree /bin/bash
+```
+
 And then run it:
 
 ```
-/path/to/mitofree.py [-h] [-S] [-M] [-K] dataset_list.txt
+usage: mitofree.py [-h] [-S] [-M] [--novop_kmer] [--mitob_kmer] [-g] [-s] [-T]
+                   FILENAME
 
-Optional arguments:
+Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty
+and MITObim
+
+positional arguments:
+  FILENAME           Path to file with multiple accessions (one per line)
+
+optional arguments:
   -h, --help         show this help message and exit
   -S, --savespace    Automatically removes residual assembly files such as
                      fastq and mitobim iterations
   -M , --maxmemory   Limit of RAM usage for NOVOPlasty. Default: no limit
-  -K , --kmer        K-mer used in NOVOPlasty assembly. Default: 39
+  --novop_kmer       K-mer used in NOVOPlasty assembly. Default: 39
+  --mitob_kmer       K-mer used in MITObim assembly. Default: 73
+  -g , --gencode     Genetic code table. Default: 2 (Vertebrate Mitochondrial)
   -s , --subset      Max number of reads used in the assembly process.
                      Default: 50 million reads
   -T , --timeout     Custom timeout for MITObim, in hours. Default: 24h
@@ -69,6 +92,11 @@ Optional arguments:
 Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (in GB). If you are running this software from a machine with limited RAM available, you will want to set this option so that it won't use all your memory. For instance, if you have a 8GB computer, you may want to use "-M 7".
 
 The -s "--subset" argument can be used to limit dataset size, which can also reduce RAM requirements. This argument can also be used to increase dataset size, which may be useful if you're having trouble in circularizing a mitogenome and some RAM to spare. 
+
+
+## Example of MitoFree's input file:
+
+Basically, this file consists of three tab-separated collumns, each with a specific information:
 
 1-SRA_RUN_NUMBER        2-SPECIES_NAME          3-SEED_GENBANK_ACCESSION
 
@@ -82,7 +110,3 @@ ERR1306034	Species3	MK291745
 ```
 
 Each line corresponds to a different assembly. This way, you can build a list of as many organisms as you want and assemble their mitogenomes all at once. It is also possible to skip an assembly by adding a hash symbol (#) at the start of its corresponding line.
-# MitoFree (in development)
-
-***You can use the Zenodo DOI to cite this code:*** 
-
