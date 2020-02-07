@@ -61,7 +61,7 @@ docker pull gavieira/mitofree:latest
 Then, go to the directory where the MitoFree's input file is and use:
 
 ```
-docker run --name mitofree -i -t -v $PWD:/mnt -w /mnt gavieira/mitofree /bin/bash
+docker run --name mitofree -i -t -v ~:/mnt -w /mnt gavieira/mitofree /bin/bash
 ```
 
 And then run it:
@@ -91,7 +91,7 @@ optional arguments:
 
 Please note the -M "--maxmemory" argument, that limits NOVOPlasty's RAM usage (in GB). If you are running this software from a machine with limited RAM available, you will want to set this option so that it won't use all your memory. For instance, if you have a 8GB computer, you may want to use "-M 7".
 
-The -s "--subset" argument can be used to limit dataset size, which can also reduce RAM requirements. This argument can also be used to increase dataset size, which may be useful if you're having trouble in circularizing a mitogenome and some RAM to spare. 
+The -s "--subset" argument can be used to limit dataset size, which can also reduce RAM requirements. This argument can also be used to increase dataset size, which may be useful if you're having trouble in circularizing a mitogenome and some RAM to spare.
 
 
 ## Example of MitoFree's input file:
