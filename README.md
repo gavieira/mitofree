@@ -1,74 +1,51 @@
-# MitoFree (in development)
+# Mitofree (in development)
 
-***You can use the Zenodo DOI to cite this code:*** 
+***You can use the Zenodo DOI to cite this code:***
 
 [![DOI](https://zenodo.org/badge/171532531.svg)](https://zenodo.org/badge/latestdoi/171532531)
 
-***Docker image available [here](https://hub.docker.com/repository/docker/gavieira/mitofree/general)***
+***Docker image available [here](https://hub.docker.com/r/gavieira/mitofree)***
 
 ---
 
 A pipeline for automated mitochondrial genome assembly using public data.
 
-Needs Biopython module installed for Python3. You can easily install it through pip3 or [conda](https://docs.conda.io/en/latest/).
+Dependencies:
 
+* [CAP3](http://seq.cs.iastate.edu/cap3.html)
+* [NOVOPlasty3.7.2](https://github.com/ndierckx/NOVOPlasty)
+* [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2)
+* [MITOS](https://gitlab.com/Bernt/MITOS)
+  * Python2 and other software
+* [Python3](https://www.python.org/)
+  * [Biopython](https://biopython.org/)
+* [sratoolkit2.10.0](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/)
 
-```
-#To install through conda:
-conda install mitos=2.0.3 biopython=1.73 mira=4.0.2 sra-tools=2.10.0 cap3=10.2011 NOVOPlasty=3.7.2 -c bioconda -m -n mitofree
+All of the above dependencies can be easily installed through [Bioconda](https://bioconda.github.io/). However, since Mitofree needs both Python3 and Python2 to run, manual creation of a conda environment for the package can be a little tricky. Thus, we encourage the use of the [***docker image***](https://hub.docker.com/r/gavieira/mitofree) to run this software.
 
-#Then, you need to activate mitofree's environment:
-conda activate mitofree
+## Running Mitofree with docker:
 
-#OBS: You will need python>=3.7 to run this script (because, among other things, of the 'capture_output' option from subprocess.run)
-#If python version is not compatible, you can update it with:
-conda update python
-```
+#### 1 - Install [docker](https://docs.docker.com/install/)
 
-You will also need to download and unpack [NOVOPlasty3.0](https://github.com/ndierckx/NOVOPlasty), [sratoolkit (>=2.10.0)](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/) and [CAP3](http://seq.cs.iastate.edu/cap3.html) and [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2) as well as install them in your PATH environment variable.
-
-In order to install to the PATH variable, please add the complete path to the binaries (sometimes located in a '/bin' directory instead of the root folder for the program) of all these dependencies to your ~/.bashrc file:
-
-```
-echo 'export PATH="$PATH:/path/to/NOVOPlasty:/path/to/sratoolkit:/path/to/CAP3:/path/to/MITObim:/path/to/MIRA"' >> ~/.bashrc
-```
-
-Then, source the file (or just restart the terminal)
-
-```
-source ~/.bashrc
-```
-
-If you can use bash autocompletion to call these scripts, you have succesfully added them to the PATH variable.
-
-***A friendly reminder:*** Most of these dependecies are available at the [bioconda](https://bioconda.github.io/) channel and thus can be easily installed through [conda](https://docs.conda.io/en/latest/). We are planning to add mitofree to bioconda in the future, which will make its instalation way simpler. For now, it is possible to use the [docker image](https://hub.docker.com/repository/docker/gavieira/mitofree/general) or to create an mitofree environment to easily run the application in a container, without the need to install any dependencies.
-
-
-Lastly, you should download MitoFree and give it execute permission:
-
-```
-chmod +x /path/to/mitofree.py
-```
-
-## Running from docker image (needs docker software installed):
-
-Download the latest image:
+#### 2 - Download the latest image:
 
 ```
 docker pull gavieira/mitofree:latest
 ```
 
-Then, use the below command to generate a container:
+#### 3- Use the following command to generate a container:
 
 ```
 docker run --name mitofree -i -t -v ~:/mnt -w /mnt gavieira/mitofree /bin/bash
+```
 
-##OBS: After creating the container, you can reuse it with the following command:
+***OBS***: After creating the container, you will not need to go through steps 1 and 2 again. You can simply start the container anytime you want. To do so, run:
 
+```
 docker start -i mitofree
 ```
 
-Finally, run MitoFree:
+#### 4- Finally, run Mitofree:
 
 ```
 usage: mitofree.py [-h] [-S] [-M] [--novop_kmer] [--mitob_kmer] [-g] [-s] [-T]
@@ -99,7 +76,7 @@ The -s "--subset" argument can be used to limit dataset size, which can also red
 
 
 
-## Example of MitoFree's input file:
+## Example of Mitofree's input file:
 
 Basically, this file consists of three tab-separated collumns, each with a specific information:
 
