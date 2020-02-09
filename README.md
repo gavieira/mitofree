@@ -15,13 +15,14 @@ Dependencies:
 * [CAP3](http://seq.cs.iastate.edu/cap3.html)
 * [NOVOPlasty3.7.2](https://github.com/ndierckx/NOVOPlasty)
 * [MIRA4.0.2](https://ufpr.dl.sourceforge.net/project/mira-assembler/MIRA/stable/mira_4.0.2_linux-gnu_x86_64_static.tar.bz2)
+* [MITObim](https://github.com/chrishah/MITObim) - Mitofree uses a [slightly modified version](https://github.com/gavieira/MITObim) of the script.
 * [MITOS](https://gitlab.com/Bernt/MITOS)
   * Python2 and other software
 * [Python3](https://www.python.org/)
   * [Biopython](https://biopython.org/)
 * [sratoolkit2.10.0](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/)
 
-All of the above dependencies can be easily installed through [Bioconda](https://bioconda.github.io/). However, since Mitofree needs both Python3 and Python2 to run, manual creation of a conda environment for the package can be a little tricky. Thus, we encourage the use of the [***docker image***](https://hub.docker.com/r/gavieira/mitofree) to run this software.
+All of the above dependencies can be easily installed through [Bioconda](https://bioconda.github.io/). However, since Mitofree needs both Python3 and Python2 to run, manual creation of a conda environment for the package can be a little tricky. Thus, we encourage the use of the [***docker image***](https://hub.docker.com/r/gavieira/mitofree) to run this software. Even though this README has been written to be as accessible as possible, it is highly recommended to [learn a bit about docker](https://docker-curriculum.com/) if you're not familiar with it.
 
 ## Running Mitofree with docker:
 
@@ -39,13 +40,21 @@ docker pull gavieira/mitofree:latest
 docker run --name mitofree -i -t -v ~:/mnt -w /mnt gavieira/mitofree /bin/bash
 ```
 
-***OBS***: After creating the container, you will not need to go through steps 1 and 2 again. You can simply start the container anytime you want. To do so, run:
+***OBS***: The contiainer has been created. Thus, the next time you need to run Mitofree, you can skip previous steps by simply starting the container and going straight to step 4. To start the container, run:
 
 ```
 docker start -i mitofree
 ```
 
 #### 4- Finally, run Mitofree:
+
+Basic usage:
+
+```
+nohup mitofree.py dataset_list.txt >mitofree.out 2>mitofree.err &
+```
+
+Mitofree's help message:
 
 ```
 usage: mitofree.py [-h] [-S] [-M] [--novop_kmer] [--mitob_kmer] [-g] [-s] [-T]
