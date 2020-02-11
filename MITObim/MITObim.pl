@@ -214,7 +214,6 @@ print "trim reads: $trim (off=0, on=1)\n";
 print "trim overhang: $trimoverhang (no=0, yes=1)\n";
 print "platform: $platform\n";
 print "kmer baiting: $k_bait\n";
-print "assembly kmer: $kmer\n"
 #print "proofread: $proofreading (off=0, on=1)\n";
 
 if ($proofreading){
