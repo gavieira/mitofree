@@ -24,9 +24,10 @@ RUN echo "source activate mitofree" > ~/.bashrc
 
 RUN ln -s /opt/conda/bin/python /opt/conda/envs/mitofree/bin/python3
 
-##Adding mitofree repo and env to PATH variable
+##Adding mitofree repo and env to PATH variable and setting LC_ALL (needed for mira)
 
 ENV PATH /mitofree/:/opt/conda/envs/mitofree/bin:$PATH
+ENV LC_ALL C
 
 ##Finally, containers will open up at the /mnt directory, where volumes should be mounted
 
