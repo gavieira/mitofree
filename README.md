@@ -22,7 +22,7 @@ Dependencies:
   * [Biopython](https://biopython.org/)
 * [sratoolkit2.10.0](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/)
 
-All of the above dependencies can be easily installed through [Bioconda](https://bioconda.github.io/). However, since Mitofree needs both Python3 and Python2 to run, manual creation of a conda environment for the package can be a little tricky. Thus, we encourage the use of the [***docker image***](https://hub.docker.com/r/gavieira/mitofree) to run this software. Even though this README has been written to be as accessible as possible, it is highly recommended to [learn a bit about docker](https://docker-curriculum.com/) if you're not familiar with it.
+All of the above dependencies can be easily installed through [Bioconda](https://bioconda.github.io/). However, due to dependency conflicts (between Python 2 and 3, for instance), manual creation of a conda environment for Mitofree can be a little tricky. Thus, we encourage using the [***docker image***](https://hub.docker.com/r/gavieira/mitofree) to run this software. Even though this README has been written to be as accessible as possible, it is highly recommended to [learn a bit about docker](https://docker-curriculum.com/) if you're not familiar with it.
 
 ## Running Mitofree with docker:
 

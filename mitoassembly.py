@@ -225,7 +225,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         print("Command used: MITObim.pl -end 100 -quick largest_contig.fa -sample {} -ref mitobim -readpool {} --kmer {} --clean".format(self.species, self.fastq_file, self.mitob_kmer))
         try:
             with open("mitobim.out", "w") as out, open("mitobim.err", "w") as err:
-                mitobim_path = "{}/MITObim.pl".format(self.scriptdir)
+                mitobim_path = "{}/MITObim/MITObim.pl".format(self.scriptdir)
                 mitobim = subprocess.run([mitobim_path, "-end", "100", "-quick", "largest_contig.fa", "-sample", self.species, "-ref", "mitobim", "-readpool", self.fastq_file, "--kmer", str(self.mitob_kmer), "--clean"], timeout=self.timeout, stdout=out, stderr=err, check=True) ##--clean should be an optional parameter in the final version of the script
             print("MITObim assembly succesfully finished!")
             return True
