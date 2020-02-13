@@ -1,11 +1,10 @@
 FROM continuumio/miniconda3:latest
 MAINTAINER gavieira <gabrieldeusdeth@gmail.com>
 
-##Cloning MitoFree repo into root directory and installing biopython
+##Cloning MitoFree repo into root directory and installing biopython on base env (Python3)
 
-RUN conda install git biopython && \
-    git clone https://github.com/gavieira/mitofree && \
-    conda remove git
+RUN mkdir /mitofree/ && conda install biopython
+COPY / /mitofree/
 
 ##Adding bioconda to conda software channels
 
