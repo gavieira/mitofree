@@ -83,7 +83,7 @@ class mitoannotation(mitofree_attributes):
         if not self.check_mitos_results():
             print("Running MITOS...")
             with open("mitos.out", "w+") as output, open('mitos.err', 'w+') as error:
-                mitos = subprocess.run(["runmitos.py", "-i", self.mitobim_result, "-c", str(self.gencode), "-o", "mitos_results", "-r", self.refdir, "--linear", "--ncbicode", "--noplots", "--best", "--alarab", "--intron", "0", "--oril", "0", "--orih", "0"], stdout=output, stderr=error)
+                mitos = subprocess.run(["runmitos.py", "-i", self.mitobim_result, "-c", str(self.gencode), "-o", "mitos_results", "-r", self.refdir, "--linear", "--ncbicode", "--best", "--alarab", "--intron", "0", "--oril", "0", "--orih", "0"], stdout=output, stderr=error)
                 print("Finished MITOS with exit status {}".format(str(mitos.returncode)))
                 output.seek(0)
                 missing_feat = False
