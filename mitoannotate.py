@@ -78,7 +78,6 @@ class mitoannotation(mitofree_attributes):
             os.mkdir("mitos_results")
             return False
 
-
     def run_mitos(self):
         if not self.check_mitos_results():
             print("Running MITOS...")
@@ -152,7 +151,10 @@ class mitoannotation(mitofree_attributes):
             product = self.feat_dict.get(feat_name).get("product")
             feat_type = 'CDS'
         return (final_feat_name, feat_type, product, anticodon)
-            
+    
+    def copy_large_gbk_to_new_directory(self, gbk_minlen):
+        pass
+        #if SeqIO.read(self.mitobim_result, "fasta")
         
 
 import argparse, traceback
