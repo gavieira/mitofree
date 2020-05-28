@@ -62,7 +62,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
             return True
         else:
             print("Downloading {}:\n".format(self.sra_run_number))
-            prefetch = subprocess.run(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0 ##'capture_output' only works with python>=3.7
+            prefetch = subprocess.run(["prefetch", "-X", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0 ##'capture_output' only works with python>=3.7
             with open("prefetch.out", "w") as stdout:
                 stdout.write(prefetch.stdout.decode())
             if prefetch.returncode == 0:
