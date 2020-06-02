@@ -51,6 +51,8 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
                 self.savespace_func()
 
     def create_directory(self):
+        #print("BASE DIR: {}\n".format(os.getcwd()))
+
         if not os.path.isdir(self.prefix):
             os.mkdir(self.prefix)
         os.chdir(self.prefix)
@@ -213,7 +215,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
 
     def check_mitobim_assembly_finished(self):
         if self.check_file_exists(self.mitobim_result) and os.stat(self.mitobim_result).st_size != 0:
-            print("MITObim assembly already finished. Going straight to the annotation process")
+            print("MITObim assembly already finished.")
             return True
         else:
             return False            
@@ -294,7 +296,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
                 it.write(seq.format("fasta").replace("-", "")) #The assembly generally contains gap characters "-" that need to be removed
         print("Assembly saved to {}".format(self.mitobim_result))
         self.gzip_ace()
-
+        
     def remove_mitobim_iterations(self):
         iterations = self.iteration_list()
         for i in iterations:

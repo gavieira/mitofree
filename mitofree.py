@@ -16,6 +16,7 @@ print = functools.partial(print, flush=True) #All "print" functions have flush=T
 
 def getArgs():
     parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
+    parser.add_argument("--mincontigsize", type=int, metavar="", default=0, help="Minimum mitogenome contig size allowed to go through annotation process. Default: 10 kbp")
     parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
     parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
     parser.add_argument("--novop_kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
@@ -37,8 +38,11 @@ if __name__ == "__main__":
                     assembly = mitoassembly(line)
                     assembly.main_function()
                     annotation = mitoannotation(line, gencode=5)
-                    annotation.run_mitos()
-                    annotation.generate_gbk()
+                    if annotation.contigsize >= args.mincontigsize:
+                        print("Contig size: {} Proceeding to annotation...".format(annotation.contigsize))
+                        annotation.run_mitos()
+                        annotation.generate_gbk()
+                        annotation.copy_gbk_to_new_directory()
                     os.chdir("..")
                 except Exception as error:
                     os.chdir("..")

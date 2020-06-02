@@ -1,0 +1,8 @@
+LOCUS       MTIO_{0}               {1} bp
+SOURCE      mitochondrion {2}
+  ORGANISM  {2}
+FEATURES             Location/Qualifiers
+     source          1..{1}
+                     /organism="{2}"
+                     /organelle="mitochondrion"
+                     /mol_type="genomic DNA"
