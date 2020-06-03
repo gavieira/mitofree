@@ -1,4 +1,5 @@
-LOCUS       MTIO_{0}               {1} bp
+LOCUS       MITO_{0}               {1} bp
+DBLINK      {0}
 SOURCE      mitochondrion {2}
   ORGANISM  {2}
 FEATURES             Location/Qualifiers

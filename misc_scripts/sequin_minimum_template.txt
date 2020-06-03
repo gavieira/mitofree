@@ -1,0 +1,19 @@
+>Feature {} [organism={}]
+{}	{}	{}
+			gene	{}
+			product	{}
+			codon_start	1  
+			transl_table	{}  
+			note	{}
+
+#Example:
+#>Feature Seq1 [organism=Pseudomyrmex gracilis]
+#1	1533	gene   #gene feature -  Exclusive to CDS's
+#			gene	COX1 
+#1	1533	CDS   # Common to all features
+#			gene	COX1 # Common to all features
+#			codon_start	1  #Field exclusive to CDS
+#			transl_table	5  #Field exclusive to CDS
+#			product	cytochrome c oxidase subunit I #Common to all, except 'gene' features
+#
+#Minimal template (first two lines are incorporated into all features. 'product' line not added to 'gene' features)
