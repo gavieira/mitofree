@@ -33,12 +33,14 @@ class bankit_submission():
                 os.remove(file)
 
     def format_sequin(self, gbk_seqio, seqid, organism):
+        '''Parses a genbank file and converts it to a sequin table
+        Only parses CDS, tRNA and rRNA features'''
         formatted_sequin = ''
         with open("{}/sequin_minimum_template.txt".format(self.scriptdir)) as sequin_template:
             content = sequin_template.readlines()
             formatted_sequin += content[0].format(seqid, organism)
             for feature in gbk_seqio.features:
-                if feature.type in ["gene", "source"]:
+                if feature.type not in ["tRNA", "rRNA", "CDS"]:
                     continue
                 location_start = feature.location.start.position + 1 #SeqIO.read always deduces one nt from the feature's start position: https://github.com/biopython/biopython/issues/897
                 gene_template = content[1] + content[2]
