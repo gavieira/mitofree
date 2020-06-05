@@ -40,7 +40,7 @@ class bankit_submission():
             for feature in gbk_seqio.features:
                 if feature.type in ["gene", "source"]:
                     continue
-                location_start = feature.location.start.position + 1 #Somehow, SeqIO.read always deduces one nt from the feature's start position.
+                location_start = feature.location.start.position + 1 #SeqIO.read always deduces one nt from the feature's start position: https://github.com/biopython/biopython/issues/897
                 gene_template = content[1] + content[2]
                 gene_feature = gene_template.format(location_start, feature.location.end,
                                                     "gene", 
