@@ -120,7 +120,7 @@ class mitoannotation(mitofree_attributes):
 
     def format_gbk_header(self):
         gbk_header_template = "{}/gbk_header_template.txt".format(self.scriptdir)
-        with open(gbk_header_template) as gbk_header:
+        with open(gbk_header_template) as gbk_header: ##OBS: The newline in the gbk_header_template.txt is important!!!
             return gbk_header.read().format(self.sra_run_number, self.contigsize, self.species)
 
     

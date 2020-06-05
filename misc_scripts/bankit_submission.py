@@ -14,6 +14,9 @@ class bankit_submission():
         self.gencode = gencode
         self.gbk_filelist = self.get_gbk_filelist()
         self.outdir = outdir
+        self.sequin = os.path.join(self.outdir, "submission.sequin")
+        self.fasta = os.path.join(self.outdir, "submission.fasta")
+        self.sra_table = os.path.join(self.outdir, "submission_sra_table.txt")
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         
     def get_gbk_filelist(self):
@@ -22,7 +25,12 @@ class bankit_submission():
     
     def create_outdir(self):
         if not os.path.exists(self.outdir):
-            os.mkdir(self.outdir)            
+            os.mkdir(self.outdir)
+    
+    def remove_previous_submission(self):
+        for file in [self.sequin, self.fasta, self.sra_table]:
+            if os.path.exists(file):
+                os.remove(file)
 
     def format_sequin(self, gbk_seqio, seqid, organism):
         formatted_sequin = ''
@@ -32,12 +40,13 @@ class bankit_submission():
             for feature in gbk_seqio.features:
                 if feature.type in ["gene", "source"]:
                     continue
+                location_start = feature.location.start.position + 1 #Somehow, SeqIO.read always deduces one nt from the feature's start position.
                 gene_template = content[1] + content[2]
-                gene_feature = gene_template.format(feature.location.start, feature.location.end,
+                gene_feature = gene_template.format(location_start, feature.location.end,
                                                     "gene", 
                                                     feature.qualifiers.get("gene")[0])
                 standard_template = content[1] + content[2] + content[3]
-                standard_feature = standard_template.format(feature.location.start, feature.location.end,
+                standard_feature = standard_template.format(location_start, feature.location.end,
                                                     feature.type, 
                                                     feature.qualifiers.get("gene")[0], 
                                                     feature.qualifiers.get("product")[0])
@@ -51,23 +60,30 @@ class bankit_submission():
         return formatted_sequin
   
     def generate_sequin(self, formatted_sequin):
-        with open(os.path.join(self.outdir, "submission.sequin"), 'a') as sequin_out:
+        with open(self.sequin, 'a') as sequin_out:
             sequin_out.write(formatted_sequin)
 
     def generate_fasta(self, gbk_seqio, seqid, organism):
         gbk_seqio.id = "{} [organism={}]".format(seqid, organism)
-        with open(os.path.join(self.outdir, "submission.fasta"), 'a') as fasta_out:
+        with open(self.fasta, 'a') as fasta_out:
             fasta_out.write(gbk_seqio.format('fasta'))
-
+    
+    def create_SRA_table_header(self):
+        with open(self.sra_table, 'w') as sra_table:
+            sra_table.write("Sequence_ID\tAccession\n")
+                            
     def generate_SRA_table(self, seqid, sra_accession):
         '''Only useful in TPA (Third Party Annotation) submissions: Generates file with sequence id and its corresponding SRA accession
         Note that this accession needs to be in the 'DBLINK' field of the genbank files
         If no sra_accession is found on this field, it is replaced by the string "NO_SRA_ACCESSION"'''
-        with open(os.path.join(self.outdir, "sra_table.txt"), 'a') as sra_table:
+        with open(self.sra_table, 'a') as sra_table:
             sra_table.write("{}\t{}\n".format(seqid, sra_accession))
-    
-    def prepare_submission(self, sra):
+                        
+    def prepare_submission(self):
+        print("Preparing bankit submission...")
+        self.remove_previous_submission()
         self.create_outdir()
+        self.create_SRA_table_header()
         for counter, gbk in enumerate(self.gbk_filelist, 1):
             seqid = "Seq{}".format(str(counter))
             gbk_seqio = SeqIO.read(gbk, "genbank")
@@ -90,4 +106,4 @@ def getArgs():
 if __name__ == "__main__":
     args = getArgs()
     sub = bankit_submission(args.gbk_dir, args.gencode, args.outdir)
-    sub.prepare_submission(args.sra)
+    sub.prepare_submission()

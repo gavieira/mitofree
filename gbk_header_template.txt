@@ -3,7 +3,3 @@ DBLINK      {0}
 SOURCE      mitochondrion {2}
   ORGANISM  {2}
 FEATURES             Location/Qualifiers
-     source          1..{1}
-                     /organism="{2}"
-                     /organelle="mitochondrion"
-                     /mol_type="genomic DNA"

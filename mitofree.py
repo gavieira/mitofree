@@ -4,9 +4,12 @@
 
 
 import argparse, functools, sys, os
+
 import traceback
 from mitoassembly import mitoassembly
 from mitoannotate import mitoannotation
+from misc_scripts.bankit_submission import bankit_submission
+
 
 assert ('linux' in sys.platform), "This code runs on Linux only."
 
@@ -18,6 +21,7 @@ def getArgs():
     parser = argparse.ArgumentParser(description="Downloads sra NGS data and assembles mitochondrial contigs using NOVOPlasty and MITObim")
     parser.add_argument("--mincontigsize", type=int, metavar="", default=0, help="Minimum mitogenome contig size allowed to go through annotation process. Default: 10 kbp")
     parser.add_argument("-S", "--savespace", action="store_true", default=False, help="Automatically removes residual assembly files such as fastq and mitobim iterations")
+    parser.add_argument("--bankit", action="store_true", default=False, help="Automatically generates bankit submission for non-curated mitofree annotation (not recommended)")
     parser.add_argument("-M", "--maxmemory", type=int, metavar="", default=0, help="Limit of RAM usage for NOVOPlasty. Default: no limit")
     parser.add_argument("--novop_kmer", type=int, metavar="", default=39, help="K-mer used in NOVOPlasty assembly. Default: 39")
     parser.add_argument("--mitob_kmer", type=int, metavar="", default=73, help="K-mer used in MITObim assembly. Default: 73")
@@ -48,5 +52,7 @@ if __name__ == "__main__":
                     os.chdir("..")
                     fullerror = traceback.format_exc()
                     print("An error has occurred for this assembly: {}\n\nFULL ERROR:\n\n{}\n\nProceeding to the next assembly...\n".format(error, fullerror))
-                    pass
-
+                    continue
+                if args.bankit:
+                    sub = bankit_submission("gbk_files", args.gencode, "bankit_submission")
+                    sub.prepare_submission()
