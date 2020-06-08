@@ -3,7 +3,6 @@ import os
 class mitofree_attributes():
     '''Base class that holds all general info for MitoFree runs'''
     def __init__(self, dataset_line, novop_kmer=39, mitob_kmer=73, maxmemory=0, subset=50000000, timeout=24, savespace=False): ##IMPLEMENT ARGS AND KWARGGS?
-        
         self.timeout = timeout*3600 #Converting to hours
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         self.novop_kmer = novop_kmer

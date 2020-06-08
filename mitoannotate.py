@@ -20,6 +20,7 @@ print = functools.partial(print, flush=True)
 class mitoannotation(mitofree_attributes):
     def __init__(self, dataset_line, gencode=2):
         super().__init__(dataset_line)
+        self.contigsize = len(SeqIO.read(self.mitobim_result, 'fasta').seq)
         self.gencode = gencode
         self.refdir = "{}/refseq63m".format(self.scriptdir)
         self.beddir = "./mitos_results/result.bed"
@@ -78,7 +79,6 @@ class mitoannotation(mitofree_attributes):
             os.mkdir("mitos_results")
             return False
 
-
     def run_mitos(self):
         if not self.check_mitos_results():
             print("Running MITOS...")
@@ -97,8 +97,10 @@ class mitoannotation(mitofree_attributes):
             print("Annotation process already finished. Skipping to generation of genbank file...")
 
     def generate_gbk(self):
+        '''Generates a gbk file in the assembly directory'''
         with open(self.gbk, "w") as gbk:
-            gbk.write(self.format_features() + self.format_sequence())
+            gbk.write(self.format_gbk_header() + self.format_features() + self.format_sequence())
+        
 
     def format_features(self):
         formatted_feats = ''
@@ -116,6 +118,12 @@ class mitoannotation(mitofree_attributes):
                 formatted_feats += "{}{:<}\n".format(21*" ", '/gene="{}"'.format(feature_name))
         return formatted_feats
 
+    def format_gbk_header(self):
+        gbk_header_template = "{}/gbk_header_template.txt".format(self.scriptdir)
+        with open(gbk_header_template) as gbk_header: ##OBS: The newline in the gbk_header_template.txt is important!!!
+            return gbk_header.read().format(self.sra_run_number, self.contigsize, self.species)
+
+    
     def format_sequence(self):
         formatted_seq = 'ORIGIN\n'
         mitoseq = SeqIO.read(self.mitobim_result, "fasta").seq.lower()
@@ -152,8 +160,14 @@ class mitoannotation(mitofree_attributes):
             product = self.feat_dict.get(feat_name).get("product")
             feat_type = 'CDS'
         return (final_feat_name, feat_type, product, anticodon)
-            
-        
+    
+    def copy_gbk_to_new_directory(self):
+        #if self.gbk is not missing any features:
+        gbk_dir = "../gbk_files"
+        if not os.path.exists(gbk_dir):
+            os.mkdir(gbk_dir)
+        shutil.copy(self.gbk, gbk_dir)
+        pass        
 
 import argparse, traceback
 

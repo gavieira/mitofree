@@ -43,14 +43,18 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
             self.merge_NOVOPlasty_contigs()
             if not self.check_mitobim_assembly_finished():
                 self.run_mitobim()
+                self.mitobim_prefix = "{}-mitobim".format(self.species) #All MIRA directories start with "organimsname-referencename". In this case, we used the string 'mitobim' as reference
                 self.iteration = self.get_complete_iteration()
                 assert self.iteration, "There must be at least one complete assembly iteration."
+                self.copy_mitobim_contigstats()
                 self.ace = self.mitobim_convert_maf_to_ace()
                 self.mitobim_ace_to_fasta()
             if self.savespace:
                 self.savespace_func()
 
     def create_directory(self):
+        #print("BASE DIR: {}\n".format(os.getcwd()))
+
         if not os.path.isdir(self.prefix):
             os.mkdir(self.prefix)
         os.chdir(self.prefix)
@@ -62,7 +66,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
             return True
         else:
             print("Downloading {}:\n".format(self.sra_run_number))
-            prefetch = subprocess.run(["prefetch", "--max-size", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0 ##'capture_output' only works with python>=3.7
+            prefetch = subprocess.run(["prefetch", "-X", "900000000",  "--location", ".", "-o", self.sra_file, self.sra_run_number], capture_output=True) ##Only works with prefetch >= 2.10.0 ##'capture_output' only works with python>=3.7
             with open("prefetch.out", "w") as stdout:
                 stdout.write(prefetch.stdout.decode())
             if prefetch.returncode == 0:
@@ -213,7 +217,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
 
     def check_mitobim_assembly_finished(self):
         if self.check_file_exists(self.mitobim_result) and os.stat(self.mitobim_result).st_size != 0:
-            print("MITObim assembly already finished. Going straight to the annotation process")
+            print("MITObim assembly already finished.")
             return True
         else:
             return False            
@@ -261,7 +265,7 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
             return False
         iterations = ["iteration{}".format(max_iteration), "iteration{}".format(max_iteration-1)] #Since the --clean flag is being used, only the last and second last iterations are available.
         for i in iterations:
-            if os.path.isfile("{0}/{1}-mitobim_assembly/{1}-mitobim_d_results/{1}-mitobim_out.maf".format(i, self.species)):
+            if os.path.isfile("{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(i, self.mitobim_prefix)):
                 return(i)
         print("No iteration folder has a finalized assembly... Proceeding to the next species...")
         return False
@@ -276,10 +280,8 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
         print("Uncompressed ACE file removed.")
 
     def mitobim_convert_maf_to_ace(self):
-        mitobim_ref_name = "mitobim"
-        mitobim_prefix = "{}-{}".format(self.species, mitobim_ref_name)
-        maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(self.iteration, mitobim_prefix)
-        ace = "{}.{}".format(mitobim_prefix, self.iteration).upper()
+        maf = "{0}/{1}_assembly/{1}_d_results/{1}_out.maf".format(self.iteration, self.mitobim_prefix)
+        ace = "{}.{}".format(self.mitobim_prefix, self.iteration).upper()
         print("Converting MAF to ACE...")
         miraconvert = subprocess.Popen(["miraconvert", "-f", "maf", "-t", "ace", "-r", "C", "-r", "f", maf, ace])
         miraconvert.wait()
@@ -294,7 +296,12 @@ class mitoassembly(mitofree_attributes): #INHERITANCE!!!
                 it.write(seq.format("fasta").replace("-", "")) #The assembly generally contains gap characters "-" that need to be removed
         print("Assembly saved to {}".format(self.mitobim_result))
         self.gzip_ace()
-
+        
+    def copy_mitobim_contigstats(self):
+        print("Copying mitobim contigstats file")
+        contigstats = "{0}/{1}_assembly/{1}_d_info/{1}_info_contigstats.txt".format(self.iteration, self.mitobim_prefix)
+        shutil.copy(contigstats, ".")
+        
     def remove_mitobim_iterations(self):
         iterations = self.iteration_list()
         for i in iterations:
