@@ -8,8 +8,101 @@ from Bio import BiopythonParserWarning
 
 warnings.simplefilter('ignore', BiopythonParserWarning) #Ignore seqIO parser warnings regarding incomplete LOCUS line
 
+
+# First, let's create a dict with gene names as keys and products as values
+
+gene_to_product_dict_original = { 
+    "CDS": {
+        "COX1": "cytochrome c oxidase subunit I",
+        "COX2": "cytochrome c oxidase subunit II",
+        "ATP8": "ATP synthase F0 subunit 8",
+        "ATP6": "ATP synthase F0 subunit 6",
+        "COX3": "cytochrome c oxidase subunit III",
+        "ND3": "NADH dehydrogenase subunit 3",
+        "ND5": "NADH dehydrogenase subunit 5",
+        "ND4": "NADH dehydrogenase subunit 4",
+        "ND4L": "NADH dehydrogenase subunit 4L",
+        "ND6": "NADH dehydrogenase subunit 6",
+        "CYTB": "cytochrome b",
+        "ND1": "NADH dehydrogenase subunit 1",
+        "ND2": "NADH dehydrogenase subunit 2"
+    },
+    "rRNA": {
+        "rrnS": "small subunit ribosomal RNA",
+        "rrnL": "large subunit ribosomal RNA"
+    },
+    "tRNA": {
+        "trnL2": "tRNA-Leu",
+        "trnK": "tRNA-Lys",
+        "trnD": "tRNA-Asp",
+        "trnG": "tRNA-Gly",
+        "trnA": "tRNA-Ala",
+        "trnR": "tRNA-Arg",
+        "trnN": "tRNA-Asn",
+        "trnS1": "tRNA-Ser",
+        "trnE": "tRNA-Glu",
+        "trnF": "tRNA-Phe",
+        "trnH": "tRNA-His",
+        "trnT": "tRNA-Thr",
+        "trnP": "tRNA-Pro",
+        "trnS2": "tRNA-Ser",
+        "trnL1": "tRNA-Leu",
+        "trnV": "tRNA-Val",
+        "trnM": "tRNA-Met",
+        "trnI": "tRNA-Ile",
+        "trnQ": "tRNA-Gln",
+        "trnW": "tRNA-Trp",
+        "trnC": "tRNA-Cys",
+        "trnY": "tRNA-Tyr"
+    }
+}
+
+gene_to_product_dict = { 
+        "COX1": "cytochrome c oxidase subunit I",
+        "COX2": "cytochrome c oxidase subunit II",
+        "ATP8": "ATP synthase F0 subunit 8",
+        "ATP6": "ATP synthase F0 subunit 6",
+        "COX3": "cytochrome c oxidase subunit III",
+        "ND3": "NADH dehydrogenase subunit 3",
+        "ND5": "NADH dehydrogenase subunit 5",
+        "ND4": "NADH dehydrogenase subunit 4",
+        "ND4L": "NADH dehydrogenase subunit 4L",
+        "ND6": "NADH dehydrogenase subunit 6",
+        "CYTB": "cytochrome b",
+        "ND1": "NADH dehydrogenase subunit 1",
+        "ND2": "NADH dehydrogenase subunit 2",
+        "rrnS": "small subunit ribosomal RNA",
+        "rrnL": "large subunit ribosomal RNA",
+        "trnL": "tRNA-Leu",
+        "trnL2": "tRNA-Leu",
+        "trnK": "tRNA-Lys",
+        "trnD": "tRNA-Asp",
+        "trnG": "tRNA-Gly",
+        "trnA": "tRNA-Ala",
+        "trnR": "tRNA-Arg",
+        "trnN": "tRNA-Asn",
+        "trnS": "tRNA-Ser",
+        "trnS1": "tRNA-Ser",
+        "trnE": "tRNA-Glu",
+        "trnF": "tRNA-Phe",
+        "trnH": "tRNA-His",
+        "trnT": "tRNA-Thr",
+        "trnP": "tRNA-Pro",
+        "trnS2": "tRNA-Ser",
+        "trnL1": "tRNA-Leu",
+        "trnV": "tRNA-Val",
+        "trnM": "tRNA-Met",
+        "trnI": "tRNA-Ile",
+        "trnQ": "tRNA-Gln",
+        "trnW": "tRNA-Trp",
+        "trnC": "tRNA-Cys",
+        "trnY": "tRNA-Tyr"
+}
+
+
 class bankit_submission():
     def __init__(self, gbk_dir, gencode, outdir):
+        self.product_dict = gene_to_product_dict
         self.gbk_dir = gbk_dir
         self.gencode = gencode
         self.gbk_filelist = self.get_gbk_filelist()
@@ -51,14 +144,15 @@ class bankit_submission():
                 standard_feature = standard_template.format(location_start, feature.location.end,
                                                     feature.type, 
                                                     feature.qualifiers.get("gene")[0], 
-                                                    feature.qualifiers.get("product")[0])
+                                                    self.product_dict[feature.qualifiers.get("gene")[0].split("-")[0]])
                 cds_fields = content[4] + content[5].format(self.gencode)
                 if feature.type in ["tRNA", "rRNA"]:
                     formatted_sequin += standard_feature
                 if feature.type == "CDS":
                     formatted_sequin += gene_feature + standard_feature + cds_fields
                 if feature.qualifiers.get("note"):
-                    formatted_sequin += content[6].format(feature.qualifiers.get("note")[0])
+                    for note in feature.qualifiers.get("note"):
+                        formatted_sequin += content[6].format(note)
         return formatted_sequin
   
     def generate_sequin(self, formatted_sequin):
@@ -90,6 +184,7 @@ class bankit_submission():
             seqid = "Seq{}".format(str(counter))
             gbk_seqio = SeqIO.read(gbk, "genbank")
             organism = gbk_seqio.annotations.get("organism").replace("_", " ").replace("-", " ")
+            #print(organism)
             formatted_sequin = self.format_sequin(gbk_seqio, seqid, organism)
             self.generate_sequin(formatted_sequin)
             self.generate_fasta(gbk_seqio, seqid, organism)
