@@ -1,4 +1,4 @@
-# Mitofree (in development)
+# Mitofree
 
 ***You can use the Zenodo DOI to cite this code:***
 
