@@ -1,5 +1,7 @@
 # Mitofree
 
+***THIS REPO HAS BEEN ARCHIVED***
+
 ***You can use the Zenodo DOI to cite this code:***
 
 [![DOI](https://zenodo.org/badge/171532531.svg)](https://zenodo.org/badge/latestdoi/171532531)
